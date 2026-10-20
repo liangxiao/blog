@@ -1,0 +1,42 @@
+---
+import PostList from '../components/PostList.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
+import { getPublishedPosts } from '../lib/posts';
+
+const posts = (await getPublishedPosts()).slice(0, 5);
+---
+
+<BaseLayout title={SITE_TITLE} description={SITE_DESCRIPTION}>
+	<section class="intro">
+		<h1>你好，我是 xiao liang 👋</h1>
+		<p>在券商做 AI 相关工作。这里记录我对 AI Agent、投研 Agent 架构的思考，以及基金投资的学习笔记。</p>
+	</section>
+	<section>
+		<h2 class="section-title">最近文章</h2>
+		<PostList posts={posts} />
+		<p class="more"><a href="/blog">查看全部文章 →</a></p>
+	</section>
+</BaseLayout>
+<style>
+	.intro {
+		margin-bottom: 3rem;
+	}
+	.intro h1 {
+		font-size: 1.9rem;
+	}
+	.intro p {
+		color: var(--text-muted);
+	}
+	.section-title {
+		font-size: 1rem;
+		color: var(--text-muted);
+		font-weight: 600;
+		letter-spacing: 0.05em;
+		margin-bottom: 0;
+	}
+	.more {
+		margin-top: 1.5rem;
+		font-size: 0.95rem;
+	}
+</style>

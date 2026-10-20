@@ -1,0 +1,58 @@
+---
+import { SITE_TITLE } from '../consts';
+import HeaderLink from './HeaderLink.astro';
+---
+
+<header>
+	<nav>
+		<a class="site-title" href="/">{SITE_TITLE}</a>
+		<div class="links">
+			<HeaderLink href="/">首页</HeaderLink>
+			<HeaderLink href="/blog">文章</HeaderLink>
+			<HeaderLink href="/about">关于</HeaderLink>
+			<a href="/rss.xml" title="RSS 订阅" class="rss">RSS</a>
+		</div>
+	</nav>
+</header>
+<style>
+	header {
+		border-bottom: 1px solid var(--border);
+		background: var(--bg);
+	}
+	nav {
+		max-width: 760px;
+		margin: 0 auto;
+		padding: 1rem 1.25rem;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+		flex-wrap: wrap;
+	}
+	.site-title {
+		font-weight: 700;
+		font-size: 1.1rem;
+		color: var(--text-strong);
+		text-decoration: none;
+	}
+	.links {
+		display: flex;
+		gap: 1.25rem;
+		align-items: center;
+		font-size: 0.95rem;
+	}
+	.links a {
+		color: var(--text-muted);
+		text-decoration: none;
+	}
+	.links a:hover,
+	.links :global(a.active) {
+		color: var(--accent);
+	}
+	.rss {
+		font-size: 0.8rem;
+		border: 1px solid var(--border);
+		padding: 0 0.4rem;
+		border-radius: 4px;
+	}
+</style>

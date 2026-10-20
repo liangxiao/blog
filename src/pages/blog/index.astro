@@ -1,0 +1,23 @@
+---
+import PostList from '../../components/PostList.astro';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getPublishedPosts } from '../../lib/posts';
+
+const posts = await getPublishedPosts();
+---
+
+<BaseLayout title="文章" description="全部文章列表">
+	<h1>全部文章</h1>
+	<p class="count">共 {posts.length} 篇</p>
+	<PostList posts={posts} />
+</BaseLayout>
+<style>
+	h1 {
+		font-size: 1.8rem;
+	}
+	.count {
+		color: var(--text-muted);
+		font-size: 0.9rem;
+		margin: 0;
+	}
+</style>

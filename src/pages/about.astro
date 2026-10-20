@@ -1,0 +1,28 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="关于" description="关于我和这个博客">
+	<div class="prose">
+		<h1>关于</h1>
+		<p><em>（这是占位内容，打开 <code>src/pages/about.astro</code> 改成你自己的介绍。）</em></p>
+		<h2>我是谁</h2>
+		<p>xiao liang，在券商从事 AI 相关工作，正在搭建基于 deepagents 的投研 Agent。</p>
+		<h2>这里会写什么</h2>
+		<ul>
+			<li>AI Agent 与 deepagents 的实践和踩坑</li>
+			<li>投研 Agent 的架构设计思考</li>
+			<li>基金（ETF）投资的学习笔记</li>
+		</ul>
+		<h2>联系我</h2>
+		<p>邮箱 / GitHub / 公众号：待补充</p>
+		<p class="note">声明：本站内容仅为个人学习记录，不构成任何投资建议。</p>
+	</div>
+</BaseLayout>
+<style>
+	.note {
+		color: var(--text-muted);
+		font-size: 0.9rem;
+		margin-top: 2rem;
+	}
+</style>
