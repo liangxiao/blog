@@ -4,7 +4,7 @@ description: '半年从「几十篇就喊干不完」到一条命令连跑 6 天
 pubDate: 2026-10-20
 tags: ['AI Agent', 'Skill', 'Loop Engineering']
 draft: false
-heroImage: '../../assets/01-timeline-analyst-five-stages-v7.png'
+heroImage: '../../assets/hero-agent-trusted-continuous-work.jpg'
 ---
 
 半年前，agent 在一个会话里处理几十篇文档，就开始喊"干不完"，停下来等人确认。现在，一条命令下去，它能连续跑 6 天、处理 1300 多篇素材，中间没有人插手；没通过审查的批次自动回滚，接着往下跑。
