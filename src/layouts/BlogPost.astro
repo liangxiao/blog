@@ -6,11 +6,12 @@ import BaseLayout from './BaseLayout.astro';
 
 type Props = CollectionEntry<'blog'>['data'];
 
-const { title, description, pubDate, updatedDate, heroImage, tags = [] } = Astro.props;
+const { title, description, pubDate, updatedDate, heroImage, draft, tags = [] } = Astro.props;
 ---
 
 <BaseLayout title={title} description={description} image={heroImage}>
 	<article>
+        {import.meta.env.DEV && draft && <p role="status">📝 草稿预览 · 正式网站不会显示此文章</p>}
 		<header class="post-header">
 			<h1>{title}</h1>
 			<p class="meta">
