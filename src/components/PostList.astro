@@ -1,4 +1,5 @@
 ---
+import { Image } from 'astro:assets';
 import type { CollectionEntry } from 'astro:content';
 import FormattedDate from './FormattedDate.astro';
 
@@ -14,14 +15,29 @@ const { posts } = Astro.props;
 	<ul class="post-list">
 		{posts.map((post) => (
 			<li>
-				<a href={`/blog/${post.id}/`}>
-					<h3>{post.data.title}</h3>
+				<a class="post-link" href={`/blog/${post.id}/`}>
+					{post.data.heroImage && (
+						<Image
+							class="thumb"
+							src={post.data.heroImage}
+							alt=""
+							width={720}
+							height={405}
+							loading="lazy"
+							quality={80}
+						/>
+					)}
+					<div class="body">
+						<h3>{post.data.title}</h3>
+						<p class="meta">
+							<FormattedDate date={post.data.pubDate} />
+							{post.data.tags.length > 0 && (
+								<span class="tags">{post.data.tags.map((t) => <span class="tag">#{t}</span>)}</span>
+							)}
+						</p>
+						<p class="desc">{post.data.description}</p>
+					</div>
 				</a>
-				<p class="meta">
-					<FormattedDate date={post.data.pubDate} />
-					{post.data.tags.length > 0 && <span class="tags">{post.data.tags.map((t) => <span class="tag">#{t}</span>)}</span>}
-				</p>
-				<p class="desc">{post.data.description}</p>
 			</li>
 		))}
 	</ul>
@@ -36,15 +52,32 @@ const { posts } = Astro.props;
 		padding: 1.25rem 0;
 		border-bottom: 1px solid var(--border);
 	}
-	.post-list a {
+	.post-link {
+		display: grid;
+		grid-template-columns: 160px 1fr;
+		gap: 1rem;
+		align-items: start;
 		text-decoration: none;
+		color: inherit;
+	}
+	.post-link:not(:has(.thumb)) {
+		grid-template-columns: 1fr;
+	}
+	.thumb {
+		width: 100%;
+		height: auto;
+		aspect-ratio: 16 / 9;
+		object-fit: cover;
+		border-radius: 8px;
+		border: 1px solid var(--border);
+		background: var(--bg-soft);
 	}
 	h3 {
 		margin: 0 0 0.35rem;
 		font-size: 1.2rem;
 		color: var(--text-strong);
 	}
-	a:hover h3 {
+	.post-link:hover h3 {
 		color: var(--accent);
 	}
 	.meta {
@@ -65,5 +98,13 @@ const { posts } = Astro.props;
 	}
 	.empty {
 		color: var(--text-muted);
+	}
+	@media (max-width: 640px) {
+		.post-link {
+			grid-template-columns: 1fr;
+		}
+		.thumb {
+			max-width: 100%;
+		}
 	}
 </style>
