@@ -74,6 +74,8 @@ export function prepare(vault, source, options = {}) {
  body = body.replace(/\u0000CODE(\d+)\u0000/g, (_, n) => saved[Number(n)]);
  const output = options.page ? { title: options.title || '页面', description: options.description || '页面内容' } : {};
  if (!options.page) for (const k of ['title','description','pubDate','updatedDate','tags']) if (doc.has(k)) output[k] = doc.get(k);
+ // Obsidian tags cannot contain spaces; keep public labels in a normal list property.
+ if (!options.page && doc.has('blogTags')) output.tags=doc.get('blogTags');
  if (!options.page && doc.get('heroImage')) output.heroImage = resolveAsset(String(doc.get('heroImage')));
  // Only blog metadata is exported; private source/status/etc. properties stay in Obsidian.
  const build = (draft) => {
@@ -116,6 +118,8 @@ async function main() {
  // Refuse to send unrelated unpublished implementation commits.
  const ahead = run('git',['log','--format=%s','origin/main..HEAD'],root,true);
  if (ahead && ahead.split('\n').some(line => line !== `content: publish ${plan.slug}`)) throw new Error('写作工具代码尚未合并到 main。请先合并功能分支，再发布文章。');
+ const sync=await import('./sync.mjs');
+ await sync.assertPublishSafe(vault,`article:${plan.slug}`);sync.progress(vault,'building','正在检查并构建文章');
  const mediaConfig = readMediaConfig();
  const media = articleMedia(plan, mediaConfig, mediaConfig?await optimizeAssets(plan.assets):plan.assets);
  plan = media.plan;
@@ -127,19 +131,22 @@ async function main() {
  try {
   const changed = writeArticle(plan, root, false);
   run('npm',['run','build']);
-  await uploadMedia(media.uploads, mediaConfig);
+  sync.progress(vault,'images','正在上传并校验图片');await uploadMedia(media.uploads, mediaConfig);
   staged = true;
   run('git',['add','--',...changed]);
   if (run('git',['diff','--cached','--name-only'],root,true)) {
    run('git',['commit','-m',`content: publish ${plan.slug}`]);
    committed = true;
   }
-  run('git',['push','origin','HEAD:main']);
+  sync.progress(vault,'pushing','正在推送 GitHub');run('git',['push','origin','HEAD:main']);
+  sync.progress(vault,'deploying','正在部署到 Cloudflare');
   const deployed = deployPages();
   if (fs.readFileSync(source,'utf8') === plan.original) {
    plan.doc.set('draft',false);
    fs.writeFileSync(source,`---\n${plan.doc.toString()}---\n${plan.bodyOriginal}`);
   }
+  await sync.recordPublication(vault,`article:${plan.slug}`,deployed);
+  sync.progress(vault,deployed?'published':'pushed',deployed?'文章已发布':'已推送 GitHub，待确认部署');
   console.log(deployed ? '文章已推送 GitHub，并完成 Cloudflare 部署提交。' : '文章已推送 GitHub。');
  } finally {
   if (!committed) {
@@ -150,5 +157,6 @@ async function main() {
  }
 }
 if (process.argv[1] && fs.realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
- main().catch(e => { console.error(e.message); process.exitCode = 1; });
+ const action=process.argv[2],vault=process.argv[3];
+ (action==='publish'&&vault?import('./sync.mjs').then(s=>s.withSyncLock(vault,main)):main()).catch(async e=>{if(vault){const s=await import('./sync.mjs');s.progress(vault,'failed',e.message);}console.error(e.message);process.exitCode=1;});
 }
