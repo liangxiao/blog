@@ -4,7 +4,7 @@ import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { parseDocument } from 'yaml';
-import { readMediaConfig, articleMedia, uploadMedia } from './media.mjs';
+import { readMediaConfig, articleMedia, uploadMedia, optimizeAssets } from './media.mjs';
 import { deployPages } from './deploy.mjs';
 
 export const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -114,7 +114,7 @@ async function main() {
  const ahead = run('git',['log','--format=%s','origin/main..HEAD'],root,true);
  if (ahead && ahead.split('\n').some(line => line !== `content: publish ${plan.slug}`)) throw new Error('写作工具代码尚未合并到 main。请先合并功能分支，再发布文章。');
  const mediaConfig = readMediaConfig();
- const media = articleMedia(plan, mediaConfig);
+ const media = articleMedia(plan, mediaConfig, mediaConfig?await optimizeAssets(plan.assets):plan.assets);
  plan = media.plan;
  const article = `src/content/blog/${plan.slug}.md`;
  const old = fs.existsSync(path.join(root, article)) ? fs.readFileSync(path.join(root, article)) : null;

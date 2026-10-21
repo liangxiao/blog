@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { prepare, root, run } from './obsidian.mjs';
-import { readMediaConfig, siteMedia, uploadMedia } from './media.mjs';
+import { readMediaConfig, siteMedia, uploadMedia, optimizeAssets } from './media.mjs';
 import { deployPages } from './deploy.mjs';
 export const fields = JSON.parse(fs.readFileSync(new URL('../integrations/obsidian-blog-publisher/site-fields.json', import.meta.url),'utf8'));
 const names = ['站点设置.md','首页介绍.md','关于.md'];
@@ -64,7 +64,7 @@ export async function publishSite(plan) {
  if(run('git',['rev-list','--count','HEAD..origin/main'],root,true)!=='0')throw new Error('远程有新提交，请先同步仓库');
  const ahead=run('git',['log','--format=%s','origin/main..HEAD'],root,true);
  if(ahead&&ahead.split('\n').some(s=>s!==commitMessage))throw new Error('存在其他尚未推送的提交，请先处理');
- const mediaConfig=readMediaConfig();const media=siteMedia(plan,mediaConfig);plan=media.plan;
+ const mediaConfig=readMediaConfig();const assets=new Map([...plan.entries].filter(([file])=>file.startsWith('public/site/')));const media=siteMedia(plan,mediaConfig,mediaConfig?await optimizeAssets(assets):assets);plan=media.plan;
  const old=new Map([...plan.entries.keys()].map(f=>[f,fs.existsSync(path.join(root,f))?fs.readFileSync(path.join(root,f)):null]));
  let committed=false,staged=false;
  try {

@@ -4,7 +4,7 @@ description: '半年从「几十篇就喊干不完」到一条命令连跑 6 天
 pubDate: 2026-10-20
 tags: ['AI Agent', 'Skill', 'Loop Engineering']
 draft: false
-heroImage: '../../assets/hero-agent-trusted-continuous-work.jpg'
+heroImage: 'https://old-rookie.pages.dev/media/blog/a37922d8913ff856955d7083cf218aeaf0d295db79d9745d702cb846bdf86981.webp'
 ---
 
 半年前，agent 在一个会话里处理几十篇文档，就开始喊"干不完"，停下来等人确认。现在，一条命令下去，它能连续跑 6 天、处理 1300 多篇素材，中间没有人插手；没通过审查的批次自动回滚，接着往下跑。
@@ -27,7 +27,7 @@ heroImage: '../../assets/hero-agent-trusted-continuous-work.jpg'
 | ④ 先写后审 | 写和审由不同子 agent 完成；编排逐步交给脚本 | 交给脚本后连跑 150 小时 | 质量过关，但每批最多拉起 8 次子 agent |
 | ⑤ 审修合一 | 审查者在限定范围内直接修，每批固定 2 个子 agent | 143 小时跑完 1316 篇 | —— |
 
-![五阶段演进：让循环转起来、转得对、转得快](../../assets/01-timeline-analyst-five-stages-v7.png)
+![五阶段演进：让循环转起来、转得对、转得快](https://old-rookie.pages.dev/media/blog/61483f92adfc2959591d6bcdea06cf4a7784b49cc379d665f495d0d499f7e56c.webp)
 
 ---
 
@@ -67,7 +67,7 @@ heroImage: '../../assets/hero-agent-trusted-continuous-work.jpg'
 
 回头看，第一阶段其实就是"常规 RAG + 一份人设"。而我们的场景恰恰最怕 RAG 的短板：**观点是演化的**。检索几个片段拼不出时间线，也回答不了"现在的结论是什么"。所以 wiki 里最核心的一类页面是：页首一个"当前结论"，下面一条倒序的观点时间线。ingest 时 agent 逐篇读**原文全文**，不再是摘要。
 
-![第二阶段：原始资料经 ingest 增量编译为 wiki 页面](../../assets/03-framework-analyst-wiki-compiler-v2.png)
+![第二阶段：原始资料经 ingest 增量编译为 wiki 页面](https://old-rookie.pages.dev/media/blog/c4b8bf832ff4f491aa36a54f413411a27ba0bc76224fccb8c57973892aa0cf08.webp)
 
 几十篇素材跑得很顺。涨到几百篇时，问题来了：**一个长会话里，agent 越跑越焦虑。** 先是自述"任务太多，干不完"，读文件只读前几行，写出来的内容大幅缩水；接着频繁停下来问问题、请求确认。根源是上下文越来越长，早期的规则被遗忘，自动压缩后更糟。这和人被任务压垮时的反应惊人地相似：先喊干不完，再应付了事，最后停下来等人拍板。
 
@@ -113,7 +113,7 @@ heroImage: '../../assets/hero-agent-trusted-continuous-work.jpg'
 
 下文把写的 agent 叫 **Builder**，审的 agent 叫 **Auditor**。每一批：Builder 写初稿 → Auditor 审查 → 需要修改就让 Builder 修、Auditor 复审（最多 3 轮）→ 通过则提交，不通过则整批回滚。
 
-![第四阶段：Builder 写入与修复，独立 Auditor 审查与复审](../../assets/05-flowchart-analyst-independent-audit.png)
+![第四阶段：Builder 写入与修复，独立 Auditor 审查与复审](https://old-rookie.pages.dev/media/blog/3a8a67f5e17e2f77d5352d661ddcbe3e6568e5e8c36ad14e017dd1a54336fd1a.webp)
 
 这是持续最久、坑最多的一个阶段，要回答几个问题：审什么才算"对"？怎么保证流程真的照着跑？人在哪里介入？怎么知道审出来的结果可信？
 
@@ -161,7 +161,7 @@ fi
 
 效果很直接：编排交给脚本之后，同样的先写后审流程，一条命令连跑了 150 小时、150 批、997 篇素材，批与批之间最长只停了 5 分钟。**能跑满全程，靠的是把编排从模型手里拿走。**
 
-![四次偷工逐步升级，脚本接管外层循环并用绊线核对人工提交的上限](../../assets/11-timeline-analyst-orchestration-control.png)
+![四次偷工逐步升级，脚本接管外层循环并用绊线核对人工提交的上限](https://old-rookie.pages.dev/media/blog/3b3f9a005447741d382618cf0418fb1b1b4843f6afbf18a2733d3d92660ae15c.webp)
 
 ### 4.3 别摆过头：什么交给代码
 
@@ -169,7 +169,7 @@ fi
 
 收敛下来的判据是：**这项检查要核对的东西，能不能事先一条条列出来？** "这一批 10 篇素材，是不是每篇都有产出、都在清单上登了记"，可以逐项核对，写成代码；"原文要点有没有漏写"列不出来，要读懂内容才能判断，交给模型。
 
-![代码负责可列举的流程检查，模型负责需要理解内容的判断](../../assets/08-framework-analyst-code-judgment.png)
+![代码负责可列举的流程检查，模型负责需要理解内容的判断](https://old-rookie.pages.dev/media/blog/be9b5a785f26116c7c0813825841e62dbf3379013e63d185246bf39ea414e8aa.webp)
 
 ### 4.4 人在哪里介入：安全闸变成了死锁
 
@@ -189,7 +189,7 @@ fi
 
 第一次跑就有收获：用刚定版的新流程从头重建，得分反而比旧流程低——第一次有证据说明"改了反而变差"。丢的都是支撑结论的关键论据：历史先例对照、校验工具、推荐清单，在压缩时间线时被裁掉了。于是加了一条规则：这三类论据不可裁剪。
 
-![外部回测：用切点前素材构建 wiki，以切点后真实文档为标准答案](../../assets/09-flowchart-analyst-heldout-eval-v7.png)
+![外部回测：用切点前素材构建 wiki，以切点后真实文档为标准答案](https://old-rookie.pages.dev/media/blog/74978aa4ef447fc18f7db4ffa1db12ed1cf2545c3f18316cd7a7eb279aa8712f.webp)
 
 有了外部标尺，才能做到"**投资评测，不投资规则**"——新规则必须能追溯到一次被观察到的失败。拿运行记录反推，有一张"边际影响"审查卡：要求 Auditor 独立判断每篇素材会不会改变结论，再和 Builder 的判断对照，防止被 Builder 先入为主。但 Builder 的报告本来就在 Auditor 的输入里，"独立判断"只是一句指令，做不到真正隔开——它上线后的 422 次运行里一次都没拦下过问题。这是一枚橡皮图章，可以放心删掉。
 
@@ -258,7 +258,7 @@ ${raw}
 
 > **最大的慢不在模型想得慢，而在读了不该读的、批切得太碎。**
 
-![提速方法：双上限分批、局部读取时间线，同时记录耗时和 token](../../assets/10-infographic-analyst-measure-speed-v7.png)
+![提速方法：双上限分批、局部读取时间线，同时记录耗时和 token](https://old-rookie.pages.dev/media/blog/45e7286b752a357104068d81fd42781d2cf44f441b34eb18bb38597e975ada79.webp)
 
 ### 5.4 结果：一条命令，连续六天
 
@@ -277,7 +277,7 @@ ${raw}
 
 但要注意，**连续跑得久本身不是目标**。编排还在模型手里时，它也能跑一整夜，只是跑着跑着就开始偷工。真正的指标是"跑得久，而且跑出来的东西可信"。
 
-![第五阶段：每批拉起两个子 agent，提交或回滚后继续下一批](../../assets/06-flowchart-analyst-audit-repair-v7.png)
+![第五阶段：每批拉起两个子 agent，提交或回滚后继续下一批](https://old-rookie.pages.dev/media/blog/4cf1e546eec66a534931679f5ddbe8f4db6310dbbb7341e6b293eff107961f4c.webp)
 
 ---
 

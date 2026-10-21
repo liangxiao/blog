@@ -40,3 +40,17 @@ test('machine-only configuration rejects invalid endpoints, account IDs and larg
   assert.throws(()=>articleMedia({assets:new Map([['src/assets/large.png',Buffer.alloc(21*1024*1024)]])},config));
  }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
+test('static images are resized and compressed before R2 naming, while animated images and SVG remain unchanged',async()=>{
+ const sharp=(await import('sharp')).default;
+ const {optimizeAssets}=await import('./media.mjs');
+ const pixels=Buffer.alloc(2400*1200*3);let seed=42;for(let i=0;i<pixels.length;i++){seed=(Math.imul(seed,1664525)+1013904223)>>>0;pixels[i]=seed>>>24;}
+ const png=await sharp(pixels,{raw:{width:2400,height:1200,channels:3}}).png().toBuffer();
+ const svg=Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>');
+ const result=await optimizeAssets(new Map([['src/assets/image.png',png],['src/assets/icon.svg',svg]]));
+ assert.equal(result.get('src/assets/icon.svg'),svg);
+ const image=result.get('src/assets/image.png');assert.equal(image.extension,'.webp');assert.ok(image.data.length<png.length);
+ const meta=await sharp(image.data).metadata();assert.equal(meta.width,2000);
+ const media=articleMedia({assets:new Map(),build:()=>'![pic](../../assets/image.png)'},config,result);
+ assert.match(media.plan.build(false),/https:\/\/images.example.com\/blog\/[a-f0-9]{64}\.webp/);
+ assert.equal([...media.uploads.values()].find(v=>v.key.endsWith('.webp')).contentType,'image/webp');
+});
