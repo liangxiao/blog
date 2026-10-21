@@ -4,6 +4,7 @@ import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { parseDocument } from 'yaml';
+import { readMediaConfig, articleMedia, uploadMedia } from './media.mjs';
 
 export const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export function run(bin, args, cwd = root, capture = false) {
@@ -89,7 +90,7 @@ function writeArticle(plan, dest, draft) {
 async function main() {
  const [action, vault, source] = process.argv.slice(2);
  if (!['preview','publish','check'].includes(action) || !vault || !source) throw new Error('用法：node scripts/obsidian.mjs preview|publish|check VAULT ARTICLE');
- const plan = prepare(vault, source);
+ let plan = prepare(vault, source);
  console.log(`文章：${plan.doc.get('title')}\n网址：/blog/${plan.slug}/\n引用图片：${plan.assets.size} 张`);
  if (action === 'check') return;
  if (action === 'preview') {
@@ -111,6 +112,9 @@ async function main() {
  // Refuse to send unrelated unpublished implementation commits.
  const ahead = run('git',['log','--format=%s','origin/main..HEAD'],root,true);
  if (ahead && ahead.split('\n').some(line => line !== `content: publish ${plan.slug}`)) throw new Error('写作工具代码尚未合并到 main。请先合并功能分支，再发布文章。');
+ const mediaConfig = readMediaConfig();
+ const media = articleMedia(plan, mediaConfig);
+ plan = media.plan;
  const article = `src/content/blog/${plan.slug}.md`;
  const old = fs.existsSync(path.join(root, article)) ? fs.readFileSync(path.join(root, article)) : null;
  const existingAssets = new Set([...plan.assets.keys()].filter(f => fs.existsSync(path.join(root,f))));
@@ -119,6 +123,7 @@ async function main() {
  try {
   const changed = writeArticle(plan, root, false);
   run('npm',['run','build']);
+  await uploadMedia(media.uploads, mediaConfig);
   staged = true;
   run('git',['add','--',...changed]);
   if (run('git',['diff','--cached','--name-only'],root,true)) {

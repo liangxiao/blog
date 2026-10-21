@@ -34,7 +34,7 @@ function remoteFixture(){
  const f=fixture({'博客标题':'站点发布测试'});const dir=fs.mkdtempSync(path.join(os.tmpdir(),'site-publish-'));const repo=path.join(dir,'repo'),remote=path.join(dir,'remote.git');fs.mkdirSync(repo);fs.mkdirSync(path.join(repo,'scripts'));
  const git=(args,cwd=repo)=>{const r=spawnSync('git',args,{cwd,encoding:'utf8'});assert.equal(r.status,0,r.stderr);return r.stdout.trim();};
  git(['init','--bare',remote],dir);git(['init','-b','main']);git(['config','user.name','Test']);git(['config','user.email','test@example.invalid']);
- for(const file of ['obsidian.mjs','site.mjs'])fs.copyFileSync(path.join(root,'scripts',file),path.join(repo,'scripts',file));
+ for(const file of ['obsidian.mjs','site.mjs','media.mjs'])fs.copyFileSync(path.join(root,'scripts',file),path.join(repo,'scripts',file));
  fs.cpSync(path.join(root,'integrations'),path.join(repo,'integrations'),{recursive:true});fs.symlinkSync(path.join(root,'node_modules'),path.join(repo,'node_modules'),'dir');fs.writeFileSync(path.join(repo,'.gitignore'),'node_modules/\n');fs.writeFileSync(path.join(repo,'package.json'),JSON.stringify({type:'module',scripts:{build:'node -e "process.exit(Number(process.env.TEST_BUILD_EXIT || 0))"'}}));
  git(['add','.']);git(['commit','-m','setup']);git(['remote','add','origin',remote]);git(['push','-u','origin','main']);
  return {git,repo,remote,invoke:(env={})=>spawnSync(process.execPath,[path.join(repo,'scripts/site.mjs'),'publish',f.vault],{cwd:repo,encoding:'utf8',env:{...process.env,...env}}),clean:()=>{f.clean();fs.rmSync(dir,{recursive:true,force:true});}};

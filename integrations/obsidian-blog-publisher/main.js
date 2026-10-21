@@ -1,6 +1,7 @@
 const { Plugin, Modal, Notice, Setting, PluginSettingTab, FuzzySuggestModal } = require('obsidian');
 const { spawn } = require('child_process');
 const path = require('path');
+const fs = require('fs');
 class Confirm extends Modal {
  constructor(app, file, action, site = false) { super(app); this.file = file; this.action = action; this.site = site; }
  onOpen() {
@@ -34,6 +35,23 @@ class ImagePicker extends FuzzySuggestModal {
  getItemText(file){return file.path;}
  onChooseItem(file){this.choose(file);}
 }
+class MediaSettings extends Modal {
+ constructor(app,plugin){super(app);this.plugin=plugin;}
+ onOpen(){
+  this.contentEl.createEl('h2',{text:'图片托管'});
+  this.contentEl.createEl('p',{text:'本地插图和封面照常编辑；启用 R2 后，发布时自动上传引用图片，并校验公开访问。预览不上传。'});
+  const file=path.join(this.plugin.config.repoPath,'.blog-media.json');
+  let config={enabled:false,accountId:'',bucket:'blog-images',publicBaseUrl:''};
+  try{if(fs.existsSync(file))config={...config,...JSON.parse(fs.readFileSync(file,'utf8'))};}catch{return new Notice('图床配置文件无法读取，请检查 .blog-media.json');}
+  new Setting(this.contentEl).setName('发布时上传 R2').setDesc('需先在 Cloudflare 开通 R2 并创建专用的公开图片桶。').addToggle(t=>t.setValue(config.enabled===true).onChange(v=>config.enabled=v));
+  for(const [key,label,hint]of [['accountId','Cloudflare 账户 ID','32 位账户 ID'],['bucket','R2 存储桶','例如 blog-images'],['publicBaseUrl','图片公开地址','https://img.你的域名，或 R2 提供的公开地址']])new Setting(this.contentEl).setName(label).setDesc(hint).addText(t=>t.setValue(config[key]||'').onChange(v=>config[key]=v.trim()));
+  this.contentEl.createEl('p',{text:'这些连接设置仅保存在本机仓库中，不会推送 GitHub。授权令牌由 Cloudflare 官方工具保存在本机，不写入知识库。'});
+  new Setting(this.contentEl).addButton(b=>b.setButtonText('保存').setCta().onClick(()=>{
+   if(config.enabled){let u;try{u=new URL(config.publicBaseUrl);}catch{}if(!/^[a-f0-9]{32}$/.test(config.accountId)||!/^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/.test(config.bucket)||!u||u.protocol!=='https:'||u.username||u.password||u.search||u.hash||u.hostname.endsWith('.r2.cloudflarestorage.com'))return new Notice('请填写有效的账户 ID、桶名和公开 HTTPS 地址');}
+   try{fs.writeFileSync(file,JSON.stringify(config,null,2)+'\n',{mode:0o600});new Notice('图片托管设置已保存');this.close();}catch(e){new Notice(`保存失败：${e.message}`);}
+  })).addButton(b=>b.setButtonText('登录 Cloudflare').onClick(()=>{this.close();this.plugin.execute('login',null,false,true);})).addButton(b=>b.setButtonText('检查连接').onClick(()=>{this.close();this.plugin.execute('status',null,false,true);}));
+ }
+}
 class SiteDashboard extends Modal {
  constructor(app,plugin){super(app);this.plugin=plugin;}
  onOpen(){
@@ -42,6 +60,7 @@ class SiteDashboard extends Modal {
   for(const [name,desc] of [['站点设置','标题、作者、导航、图片、页脚、配色、字号、显示开关和评论'],['首页介绍','首页自我介绍，支持 Markdown 和图片'],['关于','关于页正文、联系方式和声明']]){
    new Setting(this.contentEl).setName(name).setDesc(desc).addButton(b=>b.setButtonText('编辑').onClick(async()=>{this.close();await this.plugin.openSiteFile(name);}));
   }
+  new Setting(this.contentEl).setName('图片托管').setDesc('查看或连接 Cloudflare R2 图床').addButton(b=>b.setButtonText('配置图床').onClick(()=>{this.close();new MediaSettings(this.app,this.plugin).open();}));
   new Setting(this.contentEl).setName('站点图片').setDesc('从知识库图片中选择，也可以在站点设置里填写 HTTPS 图片地址。');
   for(const key of ['首页封面','作者头像','默认文章封面','网站图标'])new Setting(this.contentEl).setName(key).addButton(b=>b.setButtonText('选图').onClick(()=>{this.close();this.plugin.chooseImage('blog/站点设置.md',key);}));
   new Setting(this.contentEl).addButton(b=>b.setButtonText('预览站点').onClick(()=>{this.close();this.plugin.siteAction('preview');})).addButton(b=>b.setButtonText('发布站点设置').setCta().onClick(()=>{this.close();this.plugin.siteAction('publish');}));
@@ -51,6 +70,7 @@ module.exports = class BlogPublisher extends Plugin {
  async onload() {
   this.config = Object.assign({repoPath:'',nodePath:'/usr/local/bin/node'},await this.loadData());
   this.addSettingTab(new Settings(this.app,this));
+  this.addCommand({id:'manage-media',name:'配置图床',callback:()=>new MediaSettings(this.app,this).open()});
   this.addCommand({id:'manage-site',name:'管理站点',callback:()=>new SiteDashboard(this.app,this).open()});
   this.addCommand({id:'preview-site',name:'预览站点设置',callback:()=>this.siteAction('preview')});
   this.addCommand({id:'publish-site',name:'发布站点设置',callback:()=>this.siteAction('publish')});
@@ -107,16 +127,17 @@ module.exports = class BlogPublisher extends Plugin {
   if (action === 'publish') new Confirm(this.app,f,()=>this.execute(action,f)).open();
   else this.execute(action,f);
  }
- async execute(action,file,site=false) {
+ async execute(action,file,site=false,media=false) {
   if (this.busy) return new Notice('上一个博客操作尚未完成');
   if (!this.config.repoPath) return new Notice('请先在「博客发布」设置中填写博客仓库路径');
   this.busy = true;
   // Flush the editor before reading the Markdown from disk.
   const view = this.app.workspace.getActiveViewOfType(require('obsidian').MarkdownView);
-  try { if (view && (site || view.file?.path === file.path)) await view.save(); } catch (e) { this.busy=false; return new Notice(`保存文章失败：${e.message}`); }
+  try { if (view && !media && (site || view.file?.path === file.path)) await view.save(); } catch (e) { this.busy=false; return new Notice(`保存文章失败：${e.message}`); }
   const log = new Log(this.app); log.open(); log.append(action === 'preview' ? '准备预览…\n' : '检查、构建并发布…\n');
   const vault = this.app.vault.adapter.getBasePath();
-  const child = spawn(this.config.nodePath,[path.join(this.config.repoPath,site?'scripts/site.mjs':'scripts/obsidian.mjs'),action,vault,path.join(vault,file.path)],{
+  const args=media?[path.join(this.config.repoPath,'scripts/media.mjs'),action]:[path.join(this.config.repoPath,site?'scripts/site.mjs':'scripts/obsidian.mjs'),action,vault,path.join(vault,file.path)];
+  const child = spawn(this.config.nodePath,args,{
    cwd:this.config.repoPath, env:{...process.env, PATH:`${path.dirname(this.config.nodePath)}:/opt/homebrew/bin:/usr/local/bin:${process.env.PATH || ''}`}, shell:false
   });
   child.stdout.on('data',d=>log.append(d.toString())); child.stderr.on('data',d=>log.append(d.toString()));

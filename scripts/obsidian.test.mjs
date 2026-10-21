@@ -41,6 +41,7 @@ function publicationFixture() {
  const git=(args,cwd=repo)=>{const r=spawnSync('git',args,{cwd,encoding:'utf8'});assert.equal(r.status,0,r.stderr);return r.stdout.trim();};
  git(['init','--bare',remote],dir);git(['init','-b','main']);git(['config','user.name','Test']);git(['config','user.email','test@example.invalid']);
  fs.copyFileSync(path.join(root,'scripts/obsidian.mjs'),path.join(repo,'scripts/obsidian.mjs'));
+ fs.copyFileSync(path.join(root,'scripts/media.mjs'),path.join(repo,'scripts/media.mjs'));
  fs.symlinkSync(path.join(root,'node_modules'),path.join(repo,'node_modules'),'dir');
  fs.writeFileSync(path.join(repo,'.gitignore'),'node_modules/\n');
  fs.writeFileSync(path.join(repo,'package.json'),JSON.stringify({type:'module',scripts:{build:'node -e "process.exit(Number(process.env.TEST_BUILD_EXIT || 0))"'}}));
@@ -57,4 +58,15 @@ test('failed build restores clean repository and leaves source draft unchanged',
 });
 test('failed push keeps a retryable local commit, without marking the source published',()=>{
  const t=publicationFixture();try{const hook=path.join(t.remote,'hooks','pre-receive');fs.writeFileSync(hook,'#!/bin/sh\nexit 1\n',{mode:0o755});const before=fs.readFileSync(t.f.source,'utf8');assert.notEqual(t.invoke().status,0);assert.equal(fs.readFileSync(t.f.source,'utf8'),before);assert.equal(t.git(['status','--porcelain']),'');fs.unlinkSync(hook);const r=t.invoke();assert.equal(r.status,0,r.stderr);assert.equal(t.git(['rev-parse','HEAD']),t.git(['rev-parse','refs/heads/main'],t.remote));}finally{t.clean();}
+});
+test('R2 public access failure after build rolls back the article without publishing the source',()=>{
+ const t=publicationFixture();
+ try{
+  fs.appendFileSync(path.join(t.repo,'.gitignore'),'.blog-media.json\n');t.git(['add','.gitignore']);t.git(['commit','-m','ignore local media config']);t.git(['push']);
+  fs.writeFileSync(path.join(t.repo,'.blog-media.json'),JSON.stringify({enabled:true,accountId:'a'.repeat(32),bucket:'blog-images',publicBaseUrl:'https://images.example.invalid'}));
+  const preload=path.join(t.dir,'fetch.mjs');fs.writeFileSync(preload,'globalThis.fetch = async () => new Response("", {status:403});');
+  const original=fs.readFileSync(t.f.source,'utf8'),head=t.git(['rev-parse','HEAD']);
+  const r=t.invoke({NODE_OPTIONS:`--import=${preload}`});assert.notEqual(r.status,0);assert.match(r.stderr,/图床公开访问失败/);
+  assert.equal(t.git(['rev-parse','HEAD']),head);assert.equal(t.git(['status','--porcelain']),'');assert.equal(fs.readFileSync(t.f.source,'utf8'),original);
+ }finally{t.clean();}
 });
