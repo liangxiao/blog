@@ -1,14 +1,19 @@
 ---
-import { AUTHOR } from '../consts';
+import { AUTHOR, site } from '../consts';
 const year = new Date().getFullYear();
 ---
 
 <footer>
-	<p>© {year} {AUTHOR} · <a href="/rss.xml">RSS 订阅</a> · 由 <a href="https://astro.build" target="_blank" rel="noopener">Astro</a> 构建</p>
+	<p>© {site.copyrightStartYear < year ? `${site.copyrightStartYear}–${year}` : year} {AUTHOR}
+    {site.showRss && <> · <a href="/rss.xml">RSS 订阅</a></>}
+    {site.showPoweredBy && <> · 由 <a href="https://astro.build" target="_blank" rel="noopener">Astro</a> 构建</>}
+    </p>
+    {site.socialLinks.length > 0 && <p>{site.socialLinks.map((link, i) => <>{i > 0 && ' · '}<a href={link.href}>{link.label}</a></>)}</p>}
+    {site.footerText && <p>{site.footerText}</p>}
 </footer>
 <style>
 	footer {
-		max-width: 760px;
+		max-width: var(--content-width, 760px);
 		margin: 4rem auto 0;
 		padding: 2rem 1.25rem 3rem;
 		border-top: 1px solid var(--border);

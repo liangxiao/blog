@@ -1,5 +1,5 @@
 import rss from '@astrojs/rss';
-import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
+import { SITE_DESCRIPTION, SITE_TITLE, site } from '../consts';
 import { getPublishedPosts } from '../lib/posts';
 
 export async function GET(context) {
@@ -8,7 +8,7 @@ export async function GET(context) {
 		title: SITE_TITLE,
 		description: SITE_DESCRIPTION,
 		site: context.site,
-		customData: '<language>zh-CN</language>',
+		customData: `<language>${site.language}</language>`,
 		items: posts.map((post) => ({
 			title: post.data.title,
 			description: post.data.description,

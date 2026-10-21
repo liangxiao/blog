@@ -1,0 +1,20 @@
+---
+title: 关于
+description: 关于我和这个博客
+---
+
+## 我是谁
+
+xiao liang，在券商从事 AI 相关工作，正在搭建基于 deepagents 的投研 Agent。
+
+## 这里会写什么
+
+- AI Agent 与 deepagents 的实践和踩坑
+- 投研 Agent 的架构设计思考
+- 基金（ETF）投资的学习笔记
+
+## 联系我
+
+邮箱 / GitHub / 公众号：待补充
+
+声明：本站内容仅为个人学习记录，不构成任何投资建议。

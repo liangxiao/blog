@@ -1,9 +1,9 @@
 {
- "id": "local-blog-publisher",
- "name": "博客发布",
- "version": "1.0.0",
- "minAppVersion": "1.5.0",
- "description": "从当前知识库 blog 文件夹预览、发布选中的文章及其图片。",
- "author": "liangxiao",
- "isDesktopOnly": true
+  "id": "local-blog-publisher",
+  "name": "博客发布",
+  "version": "1.1.0",
+  "minAppVersion": "1.5.0",
+  "description": "在现有知识库管理文章、图片、首页、关于页和站点设置。",
+  "author": "liangxiao",
+  "isDesktopOnly": true
 }

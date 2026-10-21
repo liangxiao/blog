@@ -1,0 +1,50 @@
+{
+  "title": "没有终点",
+  "description": "记录 AI Agent、投研 Agent 架构，以及基金投资的学习笔记。",
+  "author": "xiao liang",
+  "url": "https://old-rookie.pages.dev",
+  "language": "zh-CN",
+  "homeHeading": "你好，我是 xiao liang 👋",
+  "homeCover": "",
+  "avatar": "",
+  "defaultCover": "",
+  "favicon": "/favicon.svg",
+  "latestHeading": "最近文章",
+  "latestCount": 5,
+  "allPostsText": "查看全部文章 →",
+  "blogHeading": "全部文章",
+  "blogDescription": "全部文章列表",
+  "aboutHeading": "关于",
+  "aboutDescription": "关于我和这个博客",
+  "navigation": [
+    {
+      "label": "首页",
+      "href": "/"
+    },
+    {
+      "label": "文章",
+      "href": "/blog"
+    },
+    {
+      "label": "关于",
+      "href": "/about"
+    }
+  ],
+  "socialLinks": [],
+  "showRss": true,
+  "showPoweredBy": true,
+  "footerText": "",
+  "copyrightStartYear": 2026,
+  "accentLight": "#2563eb",
+  "accentDark": "#60a5fa",
+  "contentWidth": 760,
+  "fontSize": 17,
+  "showDates": true,
+  "showTags": true,
+  "showListCovers": true,
+  "showArticleCover": true,
+  "commentsEnabled": false,
+  "giscusRepo": "liangxiao/blog",
+  "giscusRepoId": "",
+  "giscusCategoryId": ""
+}

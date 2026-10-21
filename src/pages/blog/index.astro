@@ -1,4 +1,5 @@
 ---
+import { site } from '../../consts';
 import PostList from '../../components/PostList.astro';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { getVisiblePosts } from '../../lib/posts';
@@ -6,8 +7,8 @@ import { getVisiblePosts } from '../../lib/posts';
 const posts = await getVisiblePosts();
 ---
 
-<BaseLayout title="文章" description="全部文章列表">
-	<h1>全部文章</h1>
+<BaseLayout title={site.blogHeading} description={site.blogDescription}>
+	<h1>{site.blogHeading}</h1>
 	<p class="count">共 {posts.length} 篇</p>
 	<PostList posts={posts} />
 </BaseLayout>
