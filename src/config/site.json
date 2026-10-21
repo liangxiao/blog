@@ -43,8 +43,8 @@
   "showTags": true,
   "showListCovers": true,
   "showArticleCover": true,
-  "commentsEnabled": false,
+  "commentsEnabled": true,
   "giscusRepo": "liangxiao/blog",
-  "giscusRepoId": "",
-  "giscusCategoryId": ""
+  "giscusRepoId": "R_kgDOVQmTyg",
+  "giscusCategoryId": "DIC_kwDOVQmTys4DJNwj"
 }

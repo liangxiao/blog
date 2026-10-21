@@ -32,3 +32,7 @@ src/.trash/
 # Local preview copy and machine-specific plugin configuration
 .writing-preview/
 integrations/obsidian-blog-publisher/data.json
+
+# Machine-only image hosting settings; OAuth credentials live outside the vault
+.blog-media.json
+.wrangler/

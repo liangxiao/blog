@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { prepare, root, run } from './obsidian.mjs';
+import { readMediaConfig, siteMedia, uploadMedia } from './media.mjs';
 export const fields = JSON.parse(fs.readFileSync(new URL('../integrations/obsidian-blog-publisher/site-fields.json', import.meta.url),'utf8'));
 const names = ['站点设置.md','首页介绍.md','关于.md'];
 const commitMessage = 'content: publish site settings';
@@ -55,17 +56,18 @@ export function previewWorkspace() {
  return dest;
 }
 function writeEntries(entries,dest) {for(const [file,data] of entries){fs.mkdirSync(path.dirname(path.join(dest,file)),{recursive:true});fs.writeFileSync(path.join(dest,file),data);}}
-export function publishSite(plan) {
+export async function publishSite(plan) {
  if(run('git',['branch','--show-current'],root,true)!=='main')throw new Error('发布仓库必须在 main 分支');
  if(run('git',['status','--porcelain'],root,true))throw new Error('仓库有未提交修改，请先处理');
  run('git',['fetch','origin','main']);
  if(run('git',['rev-list','--count','HEAD..origin/main'],root,true)!=='0')throw new Error('远程有新提交，请先同步仓库');
  const ahead=run('git',['log','--format=%s','origin/main..HEAD'],root,true);
  if(ahead&&ahead.split('\n').some(s=>s!==commitMessage))throw new Error('存在其他尚未推送的提交，请先处理');
+ const mediaConfig=readMediaConfig();const media=siteMedia(plan,mediaConfig);plan=media.plan;
  const old=new Map([...plan.entries.keys()].map(f=>[f,fs.existsSync(path.join(root,f))?fs.readFileSync(path.join(root,f)):null]));
  let committed=false,staged=false;
  try {
-  writeEntries(plan.entries,root);run('npm',['run','build']);staged=true;
+  writeEntries(plan.entries,root);run('npm',['run','build']);await uploadMedia(media.uploads,mediaConfig);staged=true;
   run('git',['add','--',...plan.entries.keys()]);
   if(run('git',['diff','--cached','--name-only'],root,true)){run('git',['commit','-m',commitMessage]);committed=true;}
   run('git',['push','origin','HEAD:main']);console.log('站点设置已推送 GitHub，等待 Cloudflare 构建。');
@@ -86,6 +88,6 @@ async function main(){
   run('npx',['astro','dev','--background','--host','127.0.0.1','--port','4322'],dest);
   run('open',['http://127.0.0.1:4322/']);return;
  }
- publishSite(plan);
+ await publishSite(plan);
 }
 if(process.argv[1]&&fs.realpathSync(process.argv[1])===fileURLToPath(import.meta.url))main().catch(e=>{console.error(e.message);process.exitCode=1;});
