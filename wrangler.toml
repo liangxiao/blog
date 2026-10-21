@@ -1,0 +1,18 @@
+# Cloudflare Pages production settings and the dedicated blog image bucket.
+name = "old-rookie"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-10-20"
+
+[vars]
+NODE_VERSION = "24"
+
+[env.production.vars]
+NODE_VERSION = "24"
+
+[[r2_buckets]]
+binding = "BLOG_IMAGES"
+bucket_name = "blog-images"
+
+[[env.production.r2_buckets]]
+binding = "BLOG_IMAGES"
+bucket_name = "blog-images"

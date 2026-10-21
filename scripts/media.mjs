@@ -15,10 +15,25 @@ export function readMediaConfig(base = root) {
  if (!url || url.protocol !== 'https:' || url.username || url.password || url.search || url.hash || url.hostname.endsWith('.r2.cloudflarestorage.com')) throw new Error('图床需要公开 HTTPS 访问地址，不能使用 R2 的 S3 管理端点。');
  return {...config, publicBaseUrl:url.href.replace(/\/$/,'')};
 }
+export async function optimizeAssets(assets) {
+ const result=new Map();
+ for(const [file,data] of assets){
+  const ext=path.extname(file).toLowerCase();
+  if(!types[ext]||data.length>20*1024*1024)throw new Error('图床仅支持不超过 20MB 的图片。');
+  if(!['.png','.jpg','.jpeg','.webp','.avif'].includes(ext)){result.set(file,data);continue;}
+  const sharp=(await import('sharp')).default;
+  const metadata=await sharp(data,{animated:true}).metadata();
+  if((metadata.pages||1)>1){result.set(file,data);continue;}
+  const optimized=await sharp(data).rotate().resize({width:2000,withoutEnlargement:true}).webp({quality:88}).toBuffer();
+  result.set(file,optimized.length<data.length?{data:optimized,extension:'.webp'}:data);
+ }
+ return result;
+}
 export function mediaAssets(assets, config) {
  const replacements = new Map(), uploads = new Map();
- for (const [file, data] of assets) {
-  const ext = path.extname(file).toLowerCase();
+ for (const [file, value] of assets) {
+  const data=Buffer.isBuffer(value)?value:value.data;
+  const ext=Buffer.isBuffer(value)?path.extname(file).toLowerCase():value.extension;
   if (!types[ext] || data.length > 20 * 1024 * 1024) throw new Error('图床仅支持不超过 20MB 的图片。');
   const hash = crypto.createHash('sha256').update(data).digest('hex');
   const key = `blog/${hash}${ext}`;
@@ -58,15 +73,15 @@ export async function uploadMedia(uploads, config, {fetcher=fetch, put} = {}) {
   console.log(`图床已上传并验证：${asset.key}`);
  }
 }
-export function articleMedia(plan, config) {
+export function articleMedia(plan, config, assets=plan.assets) {
  if (!config) return {plan, uploads:new Map()};
- const media = mediaAssets(plan.assets,config);
+ const media = mediaAssets(assets,config);
  return {plan:{...plan,assets:new Map(),build:draft=>media.rewrite(plan.build(draft))},uploads:media.uploads};
 }
-export function siteMedia(plan, config) {
+export function siteMedia(plan, config, preparedAssets) {
  if (!config) return {plan,uploads:new Map()};
  const assets = new Map([...plan.entries].filter(([file])=>file.startsWith('public/site/')));
- const media = mediaAssets(assets,config);
+ const media = mediaAssets(preparedAssets||assets,config);
  const entries = new Map([...plan.entries].filter(([file])=>!assets.has(file)).map(([file,data])=>[file,Buffer.from(media.rewrite(data.toString()))]));
  return {plan:{...plan,entries},uploads:media.uploads};
 }

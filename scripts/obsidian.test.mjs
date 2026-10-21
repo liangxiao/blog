@@ -7,7 +7,7 @@ import { prepare } from './obsidian.mjs';
 function fixture(body) {
  const vault=fs.mkdtempSync(path.join(os.tmpdir(),'blog-export-'));
  fs.mkdirSync(path.join(vault,'blog'));fs.mkdirSync(path.join(vault,'assets'));
- fs.writeFileSync(path.join(vault,'assets','pic.png'),Buffer.from('test-image'));
+ fs.writeFileSync(path.join(vault,'assets','pic.png'),Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAIAAABLbSncAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAEUlEQVQImWNwSevAihiGlgQA03tMgSVLFmYAAAAASUVORK5CYII=','base64'));
  fs.writeFileSync(path.join(vault,'private.md'),'SECRET_PRIVATE_NOTE');
  const source=path.join(vault,'blog','article.md');
  fs.writeFileSync(source,`---\ntitle: Test\nslug: test-post\ndescription: Test post\npubDate: 2026-10-20\ntags: [AI, test]\nsource: SECRET_PRIVATE_PROPERTY\ndraft: true\n---\n${body}`);

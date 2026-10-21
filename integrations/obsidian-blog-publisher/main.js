@@ -43,7 +43,7 @@ class MediaSettings extends Modal {
   const file=path.join(this.plugin.config.repoPath,'.blog-media.json');
   let config={enabled:false,accountId:'',bucket:'blog-images',publicBaseUrl:''};
   try{if(fs.existsSync(file))config={...config,...JSON.parse(fs.readFileSync(file,'utf8'))};}catch{return new Notice('图床配置文件无法读取，请检查 .blog-media.json');}
-  new Setting(this.contentEl).setName('发布时上传 R2').setDesc('需先在 Cloudflare 开通 R2 并创建专用的公开图片桶。').addToggle(t=>t.setValue(config.enabled===true).onChange(v=>config.enabled=v));
+  new Setting(this.contentEl).setName('发布时上传 R2').setDesc('需先在 Cloudflare 开通 R2、创建专用图片桶并配置图片访问地址。').addToggle(t=>t.setValue(config.enabled===true).onChange(v=>config.enabled=v));
   for(const [key,label,hint]of [['accountId','Cloudflare 账户 ID','32 位账户 ID'],['bucket','R2 存储桶','例如 blog-images'],['publicBaseUrl','图片公开地址','https://img.你的域名，或 R2 提供的公开地址']])new Setting(this.contentEl).setName(label).setDesc(hint).addText(t=>t.setValue(config[key]||'').onChange(v=>config[key]=v.trim()));
   this.contentEl.createEl('p',{text:'这些连接设置仅保存在本机仓库中，不会推送 GitHub。授权令牌由 Cloudflare 官方工具保存在本机，不写入知识库。'});
   new Setting(this.contentEl).addButton(b=>b.setButtonText('保存').setCta().onClick(()=>{
