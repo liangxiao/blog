@@ -104,7 +104,8 @@ class BlogMenu extends Modal {
 module.exports = class BlogPublisher extends Plugin {
  async onload() {
   const installed=path.join(this.app.vault.adapter.getBasePath(),'.obsidian/plugins',this.manifest.id);
-  siteStore=require(path.join(installed,'site-store.cjs'));
+  const nativeRequire=require('node:module').createRequire(path.join(installed,'main.js')),storePath=nativeRequire.resolve(path.join(installed,'site-store.cjs'));
+  delete nativeRequire.cache[storePath];siteStore=nativeRequire(storePath);
   fields=JSON.parse(fs.readFileSync(path.join(installed,'site-fields.json'),'utf8'));
   this.config = Object.assign({repoPath:'',nodePath:'/usr/local/bin/node'},await this.loadData());
   this.settingsTab=new Settings(this.app,this);this.addSettingTab(this.settingsTab);
