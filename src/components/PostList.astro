@@ -1,4 +1,5 @@
 ---
+import { site } from '../consts';
 import { Image } from 'astro:assets';
 import type { CollectionEntry } from 'astro:content';
 import FormattedDate from './FormattedDate.astro';
@@ -16,7 +17,7 @@ const { posts } = Astro.props;
 		{posts.map((post) => (
 			<li>
 				<a class="post-link" href={`/blog/${post.id}/`}>
-					{post.data.heroImage && (
+					{site.showListCovers && post.data.heroImage && typeof post.data.heroImage !== 'string' && (
 						<Image
 							class="thumb"
 							src={post.data.heroImage}
@@ -27,11 +28,12 @@ const { posts } = Astro.props;
 							quality={80}
 						/>
 					)}
-					<div class="body">
+					{site.showListCovers && (typeof post.data.heroImage === 'string' || (!post.data.heroImage && site.defaultCover)) && <img class="thumb" src={typeof post.data.heroImage === 'string' ? post.data.heroImage : site.defaultCover} alt="" width="720" height="405" loading="lazy" />}
+                    <div class="body">
 						<h3>{post.data.title}</h3>
 						<p class="meta">
-							<FormattedDate date={post.data.pubDate} />
-							{post.data.tags.length > 0 && (
+							{site.showDates && <FormattedDate date={post.data.pubDate} />}
+							{site.showTags && post.data.tags.length > 0 && (
 								<span class="tags">{post.data.tags.map((t) => <span class="tag">#{t}</span>)}</span>
 							)}
 						</p>

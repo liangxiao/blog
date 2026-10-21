@@ -12,10 +12,14 @@ const blog = defineCollection({
 			description: z.string(), // 一句话简介（必填）
 			pubDate: z.coerce.date(), // 发布日期（必填），如 2026-10-20
 			updatedDate: z.coerce.date().optional(), // 更新日期（可选）
-			heroImage: z.optional(image()), // 封面图（可选）
+			heroImage: z.optional(z.union([z.string().regex(/^https:\/\//), image()])), // 封面图（可选）
 			tags: z.array(z.string()).default([]), // 标签（可选）
 			draft: z.boolean().default(false), // 草稿：true 时不会发布
 		}),
 });
 
-export const collections = { blog };
+const pages = defineCollection({
+ loader: glob({ base: './src/content/pages', pattern: '**/*.md' }),
+ schema: z.object({ title: z.string(), description: z.string() }),
+});
+export const collections = { blog, pages };

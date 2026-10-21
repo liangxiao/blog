@@ -1,7 +1,7 @@
 /* 全站样式。颜色和字体集中在 :root 里，改这里即可换风格。 */
 
 :root {
-	--accent: #2563eb;
+	--accent: var(--accentLight, #2563eb);
 	--bg: #ffffff;
 	--bg-soft: #f6f8fa;
 	--border: #e5e7eb;
@@ -18,7 +18,7 @@
 
 @media (prefers-color-scheme: dark) {
 	:root {
-		--accent: #60a5fa;
+		--accent: var(--accentDark, #60a5fa);
 		--bg: #0f1115;
 		--bg-soft: #1a1d23;
 		--border: #2a2e36;
@@ -39,7 +39,7 @@ html {
 body {
 	margin: 0;
 	font-family: var(--font-sans);
-	font-size: 17px;
+	font-size: var(--base-font-size, 17px);
 	line-height: 1.8;
 	color: var(--text);
 	background: var(--bg);
@@ -49,7 +49,7 @@ body {
 }
 
 main {
-	max-width: 760px;
+	max-width: var(--content-width, 760px);
 	margin: 0 auto;
 	padding: 2.5rem 1.25rem 0;
 }
@@ -121,7 +121,7 @@ pre > code { all: unset; }
 .prose li { margin: 0.3em 0; }
 
 @media (max-width: 640px) {
-	body { font-size: 16px; }
+	body { font-size: max(15px, calc(var(--base-font-size, 17px) - 1px)); }
 	h1 { font-size: 1.6rem; }
 }
 

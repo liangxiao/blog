@@ -1,24 +1,32 @@
 ---
+import { getEntry, render } from 'astro:content';
 import PostList from '../components/PostList.astro';
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
+import { SITE_DESCRIPTION, SITE_TITLE, site } from '../consts';
 import { getVisiblePosts } from '../lib/posts';
 
-const posts = (await getVisiblePosts()).slice(0, 5);
+const entry = await getEntry('pages', 'home');
+if (!entry) throw new Error('缺少首页介绍');
+const { Content } = await render(entry);
+const posts = (await getVisiblePosts()).slice(0, site.latestCount);
 ---
 
 <BaseLayout title={SITE_TITLE} description={SITE_DESCRIPTION}>
 	<section class="intro">
-		<h1>你好，我是 xiao liang 👋</h1>
-		<p>在券商做 AI 相关工作。这里记录我对 AI Agent、投研 Agent 架构的思考，以及基金投资的学习笔记。</p>
+		{site.homeCover && <img class="home-cover" src={site.homeCover} alt={`${SITE_TITLE} 首页封面`} width="1200" loading="eager" />}
+        {site.avatar && <img class="avatar" src={site.avatar} alt={site.author} width="80" height="80" />}
+        <h1>{site.homeHeading}</h1>
+		<div class="prose"><Content /></div>
 	</section>
 	<section>
-		<h2 class="section-title">最近文章</h2>
+		<h2 class="section-title">{site.latestHeading}</h2>
 		<PostList posts={posts} />
-		<p class="more"><a href="/blog">查看全部文章 →</a></p>
+		<p class="more"><a href="/blog">{site.allPostsText}</a></p>
 	</section>
 </BaseLayout>
 <style>
+ .home-cover { width: 100%; height: auto; margin-bottom: 1.5rem; }
+ .avatar { border-radius: 50%; object-fit: cover; }
 	.intro {
 		margin-bottom: 3rem;
 	}

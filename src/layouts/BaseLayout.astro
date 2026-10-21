@@ -1,4 +1,5 @@
 ---
+import { site } from '../consts';
 import type { ImageMetadata } from 'astro';
 import BaseHead from '../components/BaseHead.astro';
 import Footer from '../components/Footer.astro';
@@ -7,13 +8,13 @@ import Header from '../components/Header.astro';
 interface Props {
 	title: string;
 	description: string;
-	image?: ImageMetadata;
+	image?: ImageMetadata | string;
 }
 const { title, description, image } = Astro.props;
 ---
 
 <!doctype html>
-<html lang="zh-CN">
+<html lang={site.language} style={{ "--accentLight": site.accentLight, "--accentDark": site.accentDark, "--contentWidth": `${site.contentWidth}px`, "--baseFontSize": `${site.fontSize}px` }}>
 	<head>
 		<BaseHead title={title} description={description} image={image} />
 	</head>

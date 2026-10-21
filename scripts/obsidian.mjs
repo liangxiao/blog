@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { parseDocument } from 'yaml';
 
 export const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-function run(bin, args, cwd = root, capture = false) {
+export function run(bin, args, cwd = root, capture = false) {
  const r = spawnSync(bin, args, { cwd, encoding: 'utf8', stdio: capture ? 'pipe' : 'inherit' });
  if (r.error || r.status !== 0) throw new Error(r.error?.message || r.stderr || `${bin} 执行失败（${r.status}）`);
  return capture ? r.stdout.trim() : '';
@@ -15,18 +15,18 @@ function within(base, file) { const rel = path.relative(base, file); return rel 
 function allFiles(dir) {
  return fs.readdirSync(dir, { withFileTypes: true }).flatMap(e => e.name.startsWith('.') ? [] : e.isDirectory() ? allFiles(path.join(dir, e.name)) : e.isFile() ? [path.join(dir, e.name)] : []);
 }
-export function prepare(vault, source) {
+export function prepare(vault, source, options = {}) {
  vault = fs.realpathSync(vault); source = fs.realpathSync(source);
  if (!within(path.join(vault, 'blog'), source) || !source.endsWith('.md')) throw new Error('只允许发布当前知识库 blog 文件夹中的 Markdown 文章。');
  const original = fs.readFileSync(source, 'utf8');
  const match = original.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);
- if (!match) throw new Error('请先使用「博客：新建文章」创建带文章属性的文件。');
- const doc = parseDocument(match[1]);
+ if (!match && !options.page) throw new Error('请先使用「博客：新建文章」创建带文章属性的文件。');
+ const doc = parseDocument(match?.[1] || '');
  if (doc.errors.length) throw new Error(doc.errors[0].message);
- const slug = doc.get('slug');
+ const slug = options.slug || doc.get('slug');
  if (typeof slug !== 'string' || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) throw new Error('请填写 slug：英文小写、数字和短横线，发布后保持不变。');
- for (const k of ['title', 'description']) if (typeof doc.get(k) !== 'string' || !doc.get(k).trim()) throw new Error(`请填写文章属性 ${k}。`);
- if (!doc.get('pubDate') || Number.isNaN(Date.parse(String(doc.get('pubDate'))))) throw new Error('请填写有效的 pubDate 日期。');
+ if (!options.page) for (const k of ['title', 'description']) if (typeof doc.get(k) !== 'string' || !doc.get(k).trim()) throw new Error(`请填写文章属性 ${k}。`);
+ if (!options.page && (!doc.get('pubDate') || Number.isNaN(Date.parse(String(doc.get('pubDate')))))) throw new Error('请填写有效的 pubDate 日期。');
  const assets = new Map();
  let index;
  function resolveAsset(raw) {
@@ -47,37 +47,37 @@ export function prepare(vault, source) {
   if (!['.png', '.jpg', '.jpeg', '.webp', '.gif', '.avif', '.svg'].includes(ext)) throw new Error(`只同步图片，不发布笔记嵌入或其他附件：${target}`);
   const data = fs.readFileSync(found);
   const name = crypto.createHash('sha256').update(data).digest('hex').slice(0, 20) + ext;
-  const relative = `src/assets/blog/${slug}/${name}`;
+  const relative = options.page ? `public/site/${name}` : `src/assets/blog/${slug}/${name}`;
   assets.set(relative, data);
-  return `../../assets/blog/${slug}/${name}`;
+  return options.page ? `/site/${name}` : `../../assets/blog/${slug}/${name}`;
  }
  // Protect fenced and inline code so examples remain untouched.
  const saved = [];
- let body = original.slice(match[0].length).replace(/^(`{3,}|~{3,})[^\n]*\n[\s\S]*?^\1\s*$/gm, s => `\u0000CODE${saved.push(s)-1}\u0000`).replace(/`[^`\n]+`/g, s => `\u0000CODE${saved.push(s)-1}\u0000`);
+ let body = original.slice(match?.[0].length || 0).replace(/^(`{3,}|~{3,})[^\n]*\n[\s\S]*?^\1\s*$/gm, s => `\u0000CODE${saved.push(s)-1}\u0000`).replace(/`[^`\n]+`/g, s => `\u0000CODE${saved.push(s)-1}\u0000`);
  body = body.replace(/!\[\[([^\]]+)\]\]/g, (_, value) => {
   const [target, label] = value.split('|');
   const alt = label && !/^\d+(x\d+)?$/.test(label) ? label : path.basename(target, path.extname(target));
   return `![${alt.replace(/[\[\]]/g, '')}](${resolveAsset(target)})`;
  });
  body = body.replace(/!\[([^\]]*)\]\((<[^>]+>|[^\s)]+)(?:\s+"[^"]*")?\)/g, (full, alt, target) => {
-  if (target.startsWith('../../assets/blog/')) return full;
+  if (assets.has(`public${target}`) || [...assets.keys()].some(f => target === '../../' + f.slice(4))) return full;
   return `![${alt}](${resolveAsset(target)})`;
  });
  // Reference-style images have ambiguous shared definitions; fail rather than silently omit them.
  if (/!\[[^\]]*\]\s*\[[^\]]*\]/.test(body)) throw new Error('请将引用式图片改为 ![说明](路径) 或 ![[图片名]] 后发布。');
  if (/\[\[[^\]]+\]\]/.test(body)) throw new Error('正文有指向私人笔记的双链。请改成普通文字或公开链接；不会自动发布被链接的笔记。');
  body = body.replace(/\u0000CODE(\d+)\u0000/g, (_, n) => saved[Number(n)]);
- const output = {};
- for (const k of ['title','description','pubDate','updatedDate','tags']) if (doc.has(k)) output[k] = doc.get(k);
- if (doc.get('heroImage')) output.heroImage = resolveAsset(String(doc.get('heroImage')));
+ const output = options.page ? { title: options.title || '页面', description: options.description || '页面内容' } : {};
+ if (!options.page) for (const k of ['title','description','pubDate','updatedDate','tags']) if (doc.has(k)) output[k] = doc.get(k);
+ if (!options.page && doc.get('heroImage')) output.heroImage = resolveAsset(String(doc.get('heroImage')));
  // Only blog metadata is exported; private source/status/etc. properties stay in Obsidian.
  const build = (draft) => {
   const out = parseDocument('');
   for (const [key, value] of Object.entries(output)) out.set(key, value);
-  out.set('draft', draft);
+  if (!options.page) out.set('draft', draft);
   return `---\n${out.toString()}---\n${body}`;
  };
- return { slug, source, original, doc, bodyOriginal: original.slice(match[0].length), assets, build };
+ return { slug, source, original, doc, bodyOriginal: original.slice(match?.[0].length || 0), assets, build, resolveAsset };
 }
 function writeArticle(plan, dest, draft) {
  const article = `src/content/blog/${plan.slug}.md`;

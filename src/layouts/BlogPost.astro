@@ -1,4 +1,6 @@
 ---
+import { site } from '../consts';
+import Comments from '../components/Comments.astro';
 import { Image } from 'astro:assets';
 import type { CollectionEntry } from 'astro:content';
 import FormattedDate from '../components/FormattedDate.astro';
@@ -9,19 +11,19 @@ type Props = CollectionEntry<'blog'>['data'];
 const { title, description, pubDate, updatedDate, heroImage, draft, tags = [] } = Astro.props;
 ---
 
-<BaseLayout title={title} description={description} image={heroImage}>
+<BaseLayout title={title} description={description} image={heroImage || site.defaultCover}>
 	<article>
         {import.meta.env.DEV && draft && <p role="status">📝 草稿预览 · 正式网站不会显示此文章</p>}
 		<header class="post-header">
 			<h1>{title}</h1>
 			<p class="meta">
-				<FormattedDate date={pubDate} />
-				{updatedDate && <span>· 更新于 <FormattedDate date={updatedDate} /></span>}
-				{tags.length > 0 && <span>· {tags.map((t) => `#${t}`).join(' ')}</span>}
+				{site.showDates && <FormattedDate date={pubDate} />}
+				{site.showDates && updatedDate && <span>· 更新于 <FormattedDate date={updatedDate} /></span>}
+				{site.showTags && tags.length > 0 && <span>· {tags.map((t) => `#${t}`).join(' ')}</span>}
 			</p>
 		</header>
 		{
-			heroImage && (
+			site.showArticleCover && heroImage && typeof heroImage !== 'string' && (
 				<Image
 					class="hero"
 					width={1020}
@@ -34,10 +36,12 @@ const { title, description, pubDate, updatedDate, heroImage, draft, tags = [] } 
 				/>
 			)
 		}
-		<div class="prose">
+		{site.showArticleCover && (typeof heroImage === 'string' || (!heroImage && site.defaultCover)) && <img class="hero" src={typeof heroImage === 'string' ? heroImage : site.defaultCover} alt={`${title} 封面`} width="1020" loading="eager" />}
+        <div class="prose">
 			<slot />
 		</div>
-		<p class="back"><a href="/blog">← 返回文章列表</a></p>
+		<Comments />
+        <p class="back"><a href="/blog">← 返回文章列表</a></p>
 	</article>
 </BaseLayout>
 <style>

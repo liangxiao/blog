@@ -1,0 +1,233 @@
+[
+  {
+    "key": "title",
+    "label": "博客标题",
+    "type": "text",
+    "default": "没有终点"
+  },
+  {
+    "key": "description",
+    "label": "博客简介",
+    "type": "text",
+    "default": "记录 AI Agent、投研 Agent 架构，以及基金投资的学习笔记。"
+  },
+  {
+    "key": "author",
+    "label": "作者名称",
+    "type": "text",
+    "default": "xiao liang"
+  },
+  {
+    "key": "url",
+    "label": "正式网址",
+    "type": "url",
+    "default": "https://old-rookie.pages.dev"
+  },
+  {
+    "key": "language",
+    "label": "页面语言",
+    "type": "language",
+    "default": "zh-CN"
+  },
+  {
+    "key": "homeHeading",
+    "label": "首页标题",
+    "type": "text",
+    "default": "你好，我是 xiao liang 👋"
+  },
+  {
+    "key": "homeCover",
+    "label": "首页封面",
+    "type": "image",
+    "default": ""
+  },
+  {
+    "key": "avatar",
+    "label": "作者头像",
+    "type": "image",
+    "default": ""
+  },
+  {
+    "key": "defaultCover",
+    "label": "默认文章封面",
+    "type": "image",
+    "default": ""
+  },
+  {
+    "key": "favicon",
+    "label": "网站图标",
+    "type": "image",
+    "default": "/favicon.svg"
+  },
+  {
+    "key": "latestHeading",
+    "label": "最新文章标题",
+    "type": "text",
+    "default": "最近文章"
+  },
+  {
+    "key": "latestCount",
+    "label": "首页文章数量",
+    "type": "number",
+    "default": 5,
+    "min": 1,
+    "max": 50
+  },
+  {
+    "key": "allPostsText",
+    "label": "全部文章按钮文字",
+    "type": "text",
+    "default": "查看全部文章 →"
+  },
+  {
+    "key": "blogHeading",
+    "label": "文章列表标题",
+    "type": "text",
+    "default": "全部文章"
+  },
+  {
+    "key": "blogDescription",
+    "label": "文章列表简介",
+    "type": "text",
+    "default": "全部文章列表"
+  },
+  {
+    "key": "aboutHeading",
+    "label": "关于页标题",
+    "type": "text",
+    "default": "关于"
+  },
+  {
+    "key": "aboutDescription",
+    "label": "关于页简介",
+    "type": "text",
+    "default": "关于我和这个博客"
+  },
+  {
+    "key": "navigation",
+    "label": "导航链接",
+    "type": "links",
+    "default": [
+      {
+        "label": "首页",
+        "href": "/"
+      },
+      {
+        "label": "文章",
+        "href": "/blog"
+      },
+      {
+        "label": "关于",
+        "href": "/about"
+      }
+    ]
+  },
+  {
+    "key": "socialLinks",
+    "label": "社交联系链接",
+    "type": "links",
+    "default": []
+  },
+  {
+    "key": "showRss",
+    "label": "显示RSS入口",
+    "type": "boolean",
+    "default": true
+  },
+  {
+    "key": "showPoweredBy",
+    "label": "显示Astro署名",
+    "type": "boolean",
+    "default": true
+  },
+  {
+    "key": "footerText",
+    "label": "页脚补充文字",
+    "type": "text",
+    "default": ""
+  },
+  {
+    "key": "copyrightStartYear",
+    "label": "版权起始年份",
+    "type": "number",
+    "default": 2026,
+    "min": 2000,
+    "max": 2100
+  },
+  {
+    "key": "accentLight",
+    "label": "浅色强调色",
+    "type": "color",
+    "default": "#2563eb"
+  },
+  {
+    "key": "accentDark",
+    "label": "深色强调色",
+    "type": "color",
+    "default": "#60a5fa"
+  },
+  {
+    "key": "contentWidth",
+    "label": "页面宽度",
+    "type": "number",
+    "default": 760,
+    "min": 600,
+    "max": 1200
+  },
+  {
+    "key": "fontSize",
+    "label": "正文字号",
+    "type": "number",
+    "default": 17,
+    "min": 14,
+    "max": 24
+  },
+  {
+    "key": "showDates",
+    "label": "显示文章日期",
+    "type": "boolean",
+    "default": true
+  },
+  {
+    "key": "showTags",
+    "label": "显示文章标签",
+    "type": "boolean",
+    "default": true
+  },
+  {
+    "key": "showListCovers",
+    "label": "显示列表封面",
+    "type": "boolean",
+    "default": true
+  },
+  {
+    "key": "showArticleCover",
+    "label": "显示文章顶部封面",
+    "type": "boolean",
+    "default": true
+  },
+  {
+    "key": "commentsEnabled",
+    "label": "启用评论",
+    "type": "boolean",
+    "default": false
+  },
+  {
+    "key": "giscusRepo",
+    "label": "评论仓库",
+    "type": "text",
+    "default": "liangxiao/blog"
+  },
+  {
+    "key": "giscusRepoId",
+    "label": "评论仓库ID",
+    "type": "text",
+    "default": ""
+  },
+  {
+    "key": "giscusCategoryId",
+    "label": "评论分类ID",
+    "type": "text",
+    "default": ""
+  }
+]
