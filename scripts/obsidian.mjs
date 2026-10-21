@@ -9,7 +9,10 @@ import { deployPages } from './deploy.mjs';
 
 export const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export function run(bin, args, cwd = root, capture = false) {
- const r = spawnSync(bin, args, { cwd, encoding: 'utf8', stdio: capture ? 'pipe' : 'inherit' });
+ const network=bin==='git'&&['fetch','push'].includes(args[0]);
+ const command=network?['-c','http.version=HTTP/1.1','-c','http.lowSpeedLimit=1000','-c','http.lowSpeedTime=20',...args]:args;
+ const r = spawnSync(bin, command, { cwd, encoding: 'utf8', stdio: capture ? 'pipe' : 'inherit',...(network?{timeout:45000}:{}) });
+ if(r.error?.code==='ETIMEDOUT')throw new Error('连接 GitHub 超时，本地内容已保留，请重试。');
  if (r.error || r.status !== 0) throw new Error(r.error?.message || r.stderr || `${bin} 执行失败（${r.status}）`);
  return capture ? r.stdout.trim() : '';
 }

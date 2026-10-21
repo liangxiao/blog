@@ -22,7 +22,9 @@ export function readState(vault){
  if(s.version!==1||!s.entries||typeof s.entries!=='object'||Array.isArray(s.entries))throw new Error('同步记录已损坏，请先从备份恢复；不会自动覆盖。');return s;
 }
 function git(base,args,binary=false,optional=false){
- const r=spawnSync('git',args,{cwd:base,encoding:binary?null:'utf8',timeout:30000,maxBuffer:24*1024*1024});
+ const network=['fetch','push'].includes(args[0]);
+ const command=network?['-c','http.version=HTTP/1.1','-c','http.lowSpeedLimit=1000','-c','http.lowSpeedTime=20',...args]:args;
+ const r=spawnSync('git',command,{cwd:base,encoding:binary?null:'utf8',timeout:30000,maxBuffer:24*1024*1024});
  if(r.error||r.status!==0){if(optional)return null;if(r.error?.code==='ETIMEDOUT')throw new Error('连接 GitHub 超时，请检查网络后重试。本地内容已保留。');throw new Error(r.error?.message||String(r.stderr).trim()||'Git 操作失败');}
  return binary?r.stdout:r.stdout.trim();
 }
