@@ -43,7 +43,7 @@ function publicationFixture() {
  fs.copyFileSync(path.join(root,'scripts/obsidian.mjs'),path.join(repo,'scripts/obsidian.mjs'));
  fs.copyFileSync(path.join(root,'scripts/media.mjs'),path.join(repo,'scripts/media.mjs'));
  fs.copyFileSync(path.join(root,'scripts/deploy.mjs'),path.join(repo,'scripts/deploy.mjs'));
- for(const file of ['site.mjs','sync.mjs'])fs.copyFileSync(path.join(root,'scripts',file),path.join(repo,'scripts',file));
+ for(const file of ['site.mjs','sync.mjs','github-transport.mjs'])fs.copyFileSync(path.join(root,'scripts',file),path.join(repo,'scripts',file));
  fs.cpSync(path.join(root,'integrations'),path.join(repo,'integrations'),{recursive:true});
  fs.symlinkSync(path.join(root,'node_modules'),path.join(repo,'node_modules'),'dir');
  fs.writeFileSync(path.join(repo,'.gitignore'),'node_modules\n');

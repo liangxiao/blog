@@ -8,6 +8,7 @@ import {prepare, root} from './obsidian.mjs';
 import {prepareSite, fields} from './site.mjs';
 import {articleMedia, siteMedia, readMediaConfig, optimizeAssets} from './media.mjs';
 import store from '../integrations/obsidian-blog-publisher/site-store.cjs';
+import {fetchViaAPI,preferAPI} from './github-transport.mjs';
 
 const directory=vault=>path.dirname(store.storagePath(vault));
 const stateFile=vault=>path.join(directory(vault),'sync-state.json');
@@ -23,9 +24,10 @@ export function readState(vault){
 }
 function git(base,args,binary=false,optional=false){
  const network=['fetch','push'].includes(args[0]);
+ if(network&&preferAPI(base)){fetchViaAPI(base);return '';}
  const command=network?['-c','http.version=HTTP/1.1','-c','http.lowSpeedLimit=1000','-c','http.lowSpeedTime=20',...args]:args;
  const r=spawnSync('git',command,{cwd:base,encoding:binary?null:'utf8',timeout:30000,maxBuffer:24*1024*1024});
- if(r.error||r.status!==0){if(optional)return null;if(r.error?.code==='ETIMEDOUT')throw new Error('连接 GitHub 超时，请检查网络后重试。本地内容已保留。');throw new Error(r.error?.message||String(r.stderr).trim()||'Git 操作失败');}
+ if(r.error||r.status!==0){if(optional)return null;if(args[0]==='fetch'){fetchViaAPI(base);return '';}if(r.error?.code==='ETIMEDOUT')throw new Error('连接 GitHub 超时，请检查网络后重试。本地内容已保留。');throw new Error(r.error?.message||String(r.stderr).trim()||'Git 操作失败');}
  return binary?r.stdout:r.stdout.trim();
 }
 const blob=(base,ref,file,optional=false)=>git(base,['show',`${ref}:${file}`],true,optional);

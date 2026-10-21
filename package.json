@@ -10,7 +10,7 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "test:writing": "node --test scripts/obsidian.test.mjs scripts/site.test.mjs scripts/media.test.mjs scripts/deploy.test.mjs scripts/image-host.test.mjs scripts/sync.test.mjs",
+    "test:writing": "node --test scripts/obsidian.test.mjs scripts/site.test.mjs scripts/media.test.mjs scripts/deploy.test.mjs scripts/image-host.test.mjs scripts/sync.test.mjs scripts/github-transport.test.mjs",
     "obsidian:setup": "node scripts/setup-obsidian.mjs",
     "media:login": "npm run cloudflare:login",
     "cloudflare:login": "wrangler login --scopes account:read user:read workers:write pages:write",

@@ -161,9 +161,13 @@ module.exports = class BlogPublisher extends Plugin {
  loadSite(){
   const vault=this.app.vault.adapter.getBasePath();
   if(!fs.existsSync(siteStore.storagePath(vault)))throw new Error('请先运行博客插件安装器，导入已有站点配置。');
-  this.siteDraft=siteStore.readSite(vault);return this.siteDraft;
+  this.siteDraft=siteStore.readSite(vault);this.siteBase=JSON.parse(JSON.stringify(this.siteDraft));return this.siteDraft;
  }
- saveSite(){siteStore.saveSite(this.app.vault.adapter.getBasePath(),this.siteDraft);}
+ saveSite(){
+  const result=siteStore.patchSite(this.app.vault.adapter.getBasePath(),this.siteBase,this.siteDraft);
+  Object.assign(this.siteDraft,result.value);this.siteBase=JSON.parse(JSON.stringify(result.value));
+  if(result.external.length){new Notice(`已保留别处更新的设置：${result.external.join('、')}`);this.settingsTab.focusField=document.activeElement?.getAttribute('aria-label');this.settingsTab.display();}
+ }
  async siteAction(action){
   if(this.siteSaveError)return new Notice('站点草稿尚未保存成功，请先修正设置中的保存错误。');
   if(!await this.preflight(null,true))return;

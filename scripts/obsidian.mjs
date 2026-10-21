@@ -6,12 +6,18 @@ import { fileURLToPath } from 'node:url';
 import { parseDocument } from 'yaml';
 import { readMediaConfig, articleMedia, uploadMedia, optimizeAssets } from './media.mjs';
 import { deployPages } from './deploy.mjs';
+import {fetchViaAPI,pushViaAPI,preferAPI} from './github-transport.mjs';
 
 export const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export function run(bin, args, cwd = root, capture = false) {
  const network=bin==='git'&&['fetch','push'].includes(args[0]);
+ if(network&&preferAPI(cwd)){console.log('正在通过 GitHub CLI 同步仓库…');if(args[0]==='fetch')fetchViaAPI(cwd);else pushViaAPI(cwd,'main');return '';}
  const command=network?['-c','http.version=HTTP/1.1','-c','http.lowSpeedLimit=1000','-c','http.lowSpeedTime=20',...args]:args;
  const r = spawnSync(bin, command, { cwd, encoding: 'utf8', stdio: capture ? 'pipe' : 'inherit',...(network?{timeout:45000}:{}) });
+ if(network&&(r.error||r.status!==0)){
+  console.log('Git 直连未完成，正在使用已登录的 GitHub CLI 备用通道…');
+  if(args[0]==='fetch')fetchViaAPI(cwd);else pushViaAPI(cwd,'main');return '';
+ }
  if(r.error?.code==='ETIMEDOUT')throw new Error('连接 GitHub 超时，本地内容已保留，请重试。');
  if (r.error || r.status !== 0) throw new Error(r.error?.message || r.stderr || `${bin} 执行失败（${r.status}）`);
  return capture ? r.stdout.trim() : '';
