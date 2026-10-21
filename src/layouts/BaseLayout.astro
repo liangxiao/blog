@@ -24,5 +24,12 @@ const { title, description, image } = Astro.props;
 			<slot />
 		</main>
 		<Footer />
+		{site.webAnalyticsToken && (
+			<script
+				defer
+				src="https://static.cloudflareinsights.com/beacon.min.js"
+				data-cf-beacon={JSON.stringify({ token: site.webAnalyticsToken })}
+			></script>
+		)}
 	</body>
 </html>

@@ -46,5 +46,6 @@
   "commentsEnabled": true,
   "giscusRepo": "liangxiao/blog",
   "giscusRepoId": "R_kgDOVQmTyg",
-  "giscusCategoryId": "DIC_kwDOVQmTys4DJNwj"
+  "giscusCategoryId": "DIC_kwDOVQmTys4DJNwj",
+  "webAnalyticsToken": "564ceed8b4e546c79e5beaebacf343f1"
 }
