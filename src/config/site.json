@@ -1,10 +1,10 @@
 {
   "title": "没有终点",
-  "description": "记录 AI Agent、投研 Agent 架构，以及基金投资的学习笔记。",
-  "author": "xiao liang",
+  "description": "从 NLP、知识图谱到大模型与 Agent：写实践、思考，和学习笔记。没有终点。",
+  "author": "老菜鸟",
   "url": "https://old-rookie.pages.dev",
   "language": "zh-CN",
-  "homeHeading": "你好，我是 xiao liang 👋",
+  "homeHeading": "你好",
   "homeCover": "",
   "avatar": "",
   "defaultCover": "",
@@ -15,7 +15,7 @@
   "blogHeading": "全部文章",
   "blogDescription": "全部文章列表",
   "aboutHeading": "关于",
-  "aboutDescription": "关于我和这个博客",
+  "aboutDescription": "关于这个博客",
   "navigation": [
     {
       "label": "首页",
