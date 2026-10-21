@@ -88,9 +88,9 @@ export function pushViaAPI(base,branch,{invoke,create=false}={}){
   const data=git(base,['cat-file','-p',sha]),split=data.indexOf('\n\n'),message=data.slice(split+2),parents=(data.slice(0,split).match(/^parent /gm)||[]).length;
   if(parents!==1)throw new Error('API 备用推送暂不处理未推送的合并提交。');
   const priorTree=git(base,['rev-parse',`${sha}^^{tree}`]);
-  const names=git(base,['diff-tree','--no-commit-id','--name-only','-r','--no-renames',sha]).split('\n').filter(Boolean),tree=[];
+  const names=git(base,['diff-tree','--no-commit-id','--name-only','-z','-r','--no-renames',sha]).split('\0').filter(Boolean),tree=[];
   for(const file of names){
-   const entry=git(base,['ls-tree',sha,'--',file]);
+   const entry=git(base,['ls-tree','-z',sha,'--',file]);
    if(!entry){tree.push({path:file,sha:null});continue;}
    const match=entry.match(/^(\d+) (\w+) ([a-f0-9]+)\t/);if(!match||match[2]!=='blob')throw new Error('API 推送暂不处理子模块变化。');
    if(!uploaded.has(match[3])){const bytes=spawnSync('git',['cat-file','blob',match[3]],{cwd:base,maxBuffer:32*1024*1024}).stdout;const blob=api('git/blobs','POST',{content:bytes.toString('base64'),encoding:'base64'});if(blob?.sha!==match[3])throw new Error('GitHub 上传文件校验失败。');uploaded.add(match[3]);}

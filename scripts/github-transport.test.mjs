@@ -45,7 +45,7 @@ test('verified API fetch imports real Git objects without changing the worktree'
 });
 test('API push verifies tree content, never forces refs and preserves a recoverable local commit',()=>{
  const t=fixture();try{
-  fs.writeFileSync(path.join(t.local,'hello.txt'),'published content');t.git(t.local,['add','.']);t.call(t.local,['commit','-m','content: publish example'],undefined,{GIT_AUTHOR_DATE:'2026-10-21T10:00:00+08:00',GIT_COMMITTER_DATE:'2026-10-21T10:00:00+08:00'});
+  fs.writeFileSync(path.join(t.local,'hello.txt'),'published content');fs.writeFileSync(path.join(t.local,'中文文件.md'),'public Chinese filename');t.git(t.local,['add','.']);t.call(t.local,['commit','-m','content: publish example'],undefined,{GIT_AUTHOR_DATE:'2026-10-21T10:00:00+08:00',GIT_COMMITTER_DATE:'2026-10-21T10:00:00+08:00'});
   const tree=t.git(t.local,['rev-parse','HEAD^{tree}']),published=pushViaAPI(t.local,'main',{invoke:t.api});
   assert.equal(t.git(t.local,['rev-parse','HEAD']),published);assert.equal(t.git(t.server,['rev-parse','main']),published);assert.equal(t.git(t.local,['rev-parse','HEAD^{tree}']),tree);assert.equal(t.git(t.local,['status','--porcelain']),'');assert.equal(t.updates[0].force,false);
  }finally{t.clean();}
