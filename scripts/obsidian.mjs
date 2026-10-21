@@ -18,9 +18,12 @@ function allFiles(dir) {
  return fs.readdirSync(dir, { withFileTypes: true }).flatMap(e => e.name.startsWith('.') ? [] : e.isDirectory() ? allFiles(path.join(dir, e.name)) : e.isFile() ? [path.join(dir, e.name)] : []);
 }
 export function prepare(vault, source, options = {}) {
- vault = fs.realpathSync(vault); source = fs.realpathSync(source);
+ const relativeSource=path.relative(path.resolve(vault),path.resolve(source));
+ vault = fs.realpathSync(vault);
+ const virtualPage=options.page===true && typeof options.sourceText==='string';
+ source = virtualPage ? path.resolve(vault,relativeSource) : fs.realpathSync(source);
  if (!within(path.join(vault, 'blog'), source) || !source.endsWith('.md')) throw new Error('只允许发布当前知识库 blog 文件夹中的 Markdown 文章。');
- const original = fs.readFileSync(source, 'utf8');
+ const original = virtualPage ? options.sourceText : fs.readFileSync(source, 'utf8');
  const match = original.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);
  if (!match && !options.page) throw new Error('请先使用「博客：新建文章」创建带文章属性的文件。');
  const doc = parseDocument(match?.[1] || '');

@@ -2,3 +2,14 @@
 .blog-cover-preview img { width:160px; max-height:100px; object-fit:contain; border-radius:6px; }
 .blog-cover-preview strong { color:var(--text-normal); }
 .blog-cover-preview button { margin-top:8px; }
+.blog-settings-actions { position:sticky; top:0; z-index:1; background:var(--background-primary); padding-bottom:12px; border-bottom:1px solid var(--background-modifier-border); }
+.blog-settings-actions .setting-item { border:0; padding:8px 0; }
+.blog-settings-actions small { color:var(--text-muted); }
+.blog-settings-tabs { display:flex; flex-wrap:wrap; gap:6px; margin:18px 0 24px; }
+.blog-settings-tabs button { box-shadow:none; }
+.blog-settings-body .setting-item-control input[type=text], .blog-settings-body textarea { width:min(320px,100%); }
+.blog-settings-body textarea { min-width:240px; resize:vertical; }
+.blog-settings-body .blog-page-field { display:block; }
+.blog-page-field .setting-item-info { margin-bottom:12px; }
+.blog-page-field .setting-item-control { display:block; }
+.blog-settings-body .blog-page-field textarea { width:100%; min-height:160px; font-family:var(--font-text); line-height:1.6; }
