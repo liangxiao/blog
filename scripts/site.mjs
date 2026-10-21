@@ -71,7 +71,16 @@ export async function publishSite(plan) {
   writeEntries(plan.entries,root);run('npm',['run','build']);await uploadMedia(media.uploads,mediaConfig);staged=true;
   run('git',['add','--',...plan.entries.keys()]);
   if(run('git',['diff','--cached','--name-only'],root,true)){run('git',['commit','-m',commitMessage]);committed=true;}
-  run('git',['push','origin','HEAD:main']);deployPages();console.log('站点设置发布操作完成。');
+  run('git',['push','origin','HEAD:main']);
+  const deployed=deployPages();
+  // An already-open preview must not keep showing the version from before publication.
+  const preview=path.join(root,'.writing-preview');
+  if(fs.existsSync(path.join(preview,'src'))){
+   try{writeEntries(plan.entries,preview);console.log('已同步更新本地站点预览。');}
+   catch(error){console.warn(`发布已完成，但本地预览刷新失败：${error.message}。请重新点击「预览站点设置」。`);}
+  }
+  console.log(deployed?'站点设置已推送 GitHub，并完成 Cloudflare 部署提交。':'站点设置已推送 GitHub。');
+  console.log(`正式网站：${plan.site.url}`);
  } finally {
   if(!committed){if(staged)run('git',['reset','--',...plan.entries.keys()]);for(const [f,data]of old){if(data)fs.writeFileSync(path.join(root,f),data);else fs.rmSync(path.join(root,f),{force:true});}}
  }

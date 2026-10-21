@@ -13,6 +13,20 @@ class Confirm extends Modal {
 class Log extends Modal {
  onOpen() { this.contentEl.createEl('h3', { text: '博客操作日志' }); this.pre = this.contentEl.createEl('pre'); this.pre.style.whiteSpace = 'pre-wrap'; }
  append(text) { this.pre.textContent = (this.pre.textContent + text).slice(-30000); this.pre.scrollIntoView({ block:'end' }); }
+ published(repoPath) {
+  const summary=this.contentEl.createDiv();this.pre.before(summary);
+  let deploy,site;
+  try{deploy=JSON.parse(fs.readFileSync(path.join(repoPath,'.blog-deploy.json'),'utf8'));}catch{}
+  try{site=JSON.parse(fs.readFileSync(path.join(repoPath,'src/config/site.json'),'utf8'));}catch{}
+  summary.createEl('h2',{text:deploy?.enabled===true?'已推送 GitHub，并提交 Cloudflare 部署':'已推送 GitHub'});
+  if(deploy?.enabled!==true)summary.createEl('p',{text:'本机未启用直接部署，请确认 Cloudflare 的自动部署状态。'});
+  let url;try{url=new URL(site?.url);}catch{}
+  if(url?.protocol==='https:'&&!url.username&&!url.password){
+   summary.createEl('a',{text:`查看正式网站：${url.origin}`,attr:{href:url.origin,target:'_blank',rel:'noopener noreferrer'}});
+  }
+  summary.createEl('p',{text:'127.0.0.1:4322 是本地预览地址。再次修改笔记后，点击预览或发布才会更新网页。'});
+  summary.scrollIntoView({block:'start'});
+ }
 }
 class NewPost extends Modal {
  constructor(app) { super(app); this.title = ''; }
@@ -142,7 +156,7 @@ module.exports = class BlogPublisher extends Plugin {
   });
   child.stdout.on('data',d=>log.append(d.toString())); child.stderr.on('data',d=>log.append(d.toString()));
   child.on('error',e=>{this.busy=false;log.append(`\n启动失败：${e.message}`);});
-  child.on('close',code=>{this.busy=false;log.append(code===0 ? '\n完成。\n':'\n未完成，请查看上面的原因。\n');new Notice(code===0 ? '博客操作完成':'博客操作失败，请查看日志');});
+  child.on('close',code=>{this.busy=false;log.append(code===0 ? '\n完成。\n':'\n未完成，请查看上面的原因。\n');if(code===0&&action==='publish'&&!media)log.published(this.config.repoPath);new Notice(code===0 ? (action==='publish'&&!media?'发布完成，点击日志顶部链接查看正式网站':'博客操作完成'):'博客操作失败，请查看日志');});
  }
 };
 class Settings extends PluginSettingTab {

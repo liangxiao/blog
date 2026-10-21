@@ -40,5 +40,16 @@ function remoteFixture(){
  return {git,repo,remote,invoke:(env={})=>spawnSync(process.execPath,[path.join(repo,'scripts/site.mjs'),'publish',f.vault],{cwd:repo,encoding:'utf8',env:{...process.env,...env}}),clean:()=>{f.clean();fs.rmSync(dir,{recursive:true,force:true});}};
 }
 test('site publication pushes exactly the three site files',()=>{const t=remoteFixture();try{const r=t.invoke();assert.equal(r.status,0,r.stderr);assert.deepEqual(t.git(['diff-tree','--no-commit-id','--name-only','-r','HEAD']).split('\n'),['src/config/site.json','src/content/pages/about.md','src/content/pages/home.md']);assert.equal(t.git(['status','--porcelain']),'');}finally{t.clean();}});
+test('site preview stays unchanged on failure and refreshes after successful publication',()=>{
+ const t=remoteFixture();
+ try{
+  fs.appendFileSync(path.join(t.repo,'.gitignore'),'.writing-preview/\n');t.git(['add','.gitignore']);t.git(['commit','-m','ignore local preview']);t.git(['push']);
+  const preview=path.join(t.repo,'.writing-preview/src/content/pages/home.md');fs.mkdirSync(path.dirname(preview),{recursive:true});fs.writeFileSync(preview,'旧的首页介绍');
+  assert.notEqual(t.invoke({TEST_BUILD_EXIT:'1'}).status,0);assert.equal(fs.readFileSync(preview,'utf8'),'旧的首页介绍');
+  const r=t.invoke();assert.equal(r.status,0,r.stderr);
+  assert.equal(fs.readFileSync(preview,'utf8'),fs.readFileSync(path.join(t.repo,'src/content/pages/home.md'),'utf8'));
+  assert.match(r.stdout,/正式网站：https:\/\//);assert.equal(t.git(['status','--porcelain']),'');
+ }finally{t.clean();}
+});
 test('site build failure rolls back files and index',()=>{const t=remoteFixture();try{assert.notEqual(t.invoke({TEST_BUILD_EXIT:'1'}).status,0);assert.equal(t.git(['status','--porcelain']),'');assert.equal(t.git(['rev-parse','HEAD']),t.git(['rev-parse','refs/heads/main'],t.remote));}finally{t.clean();}});
 test('site push failure leaves a clean, retryable commit',()=>{const t=remoteFixture();try{const hook=path.join(t.remote,'hooks/pre-receive');fs.writeFileSync(hook,'#!/bin/sh\nexit 1\n',{mode:0o755});assert.notEqual(t.invoke().status,0);assert.equal(t.git(['status','--porcelain']),'');fs.unlinkSync(hook);const r=t.invoke();assert.equal(r.status,0,r.stderr);assert.equal(t.git(['rev-parse','HEAD']),t.git(['rev-parse','refs/heads/main'],t.remote));}finally{t.clean();}});
