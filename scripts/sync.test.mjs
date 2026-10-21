@@ -83,6 +83,14 @@ test('edits to image bytes are detected even when the Markdown text does not cha
   const remoteImage=[...p.assets.keys()][0];t.outside(remoteImage,()=> 'changed repository image');assert.equal((await t.check()).changes.find(c=>c.id==='article:example').status,'remote');
  }finally{t.clean();}
 });
+test('syncing an external text edit preserves local image and cover references',async()=>{
+ const t=fixture();try{
+  fs.mkdirSync(path.join(t.vault,'blog/assets'));fs.writeFileSync(path.join(t.vault,'blog/assets/pic.png'),'original image');fs.writeFileSync(t.source,fs.readFileSync(t.source,'utf8').replace('draft: false','heroImage: assets/pic.png\ndraft: false')+'\n![[assets/pic.png]]');
+  const p=prepare(t.vault,t.source);for(const [file,data]of p.assets){fs.mkdirSync(path.dirname(path.join(t.repo,file)),{recursive:true});fs.writeFileSync(path.join(t.repo,file),data);}fs.writeFileSync(path.join(t.repo,'src/content/blog/example.md'),p.build(false));t.git(['add','.']);t.git(['commit','-m','add image']);t.git(['push']);t.git(['pull','--ff-only'],path.join(t.repo,'../other'));
+  await t.check();t.outside('src/content/blog/example.md',s=>s.replace('原正文','外部新正文'));await t.sync();
+  const text=fs.readFileSync(t.source,'utf8');assert.match(text,/外部新正文/);assert.match(text,/heroImage: assets\/pic.png/);assert.match(text,/!\[\[assets\/pic.png\]\]/);
+ }finally{t.clean();}
+});
 test('new remote articles and repository images are imported without downloading remote URLs',async()=>{
  const t=fixture();try{
   await t.check();

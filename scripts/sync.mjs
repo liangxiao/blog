@@ -196,16 +196,23 @@ function importImage(scan,value,remotePath,writes){
  const relative=`blog/assets/imported/${hash(data).slice(0,20)}${path.extname(file).toLowerCase()}`;
  targetPath(scan.vault,relative);writes.set(relative,data);return relative;
 }
-function importMarkdown(scan,text,remotePath,writes){
+function imageReplacements(local,projected){
+ const tokens=text=>text.replace(/^(`{3,}|~{3,})[^\n]*\n[\s\S]*?^\1\s*$/gm,'').replace(/`[^`\n]+`/g,'').match(/!\[\[[^\]]+\]\]|!\[[^\]]*\]\((?:<[^>]+>|[^\s)]+)(?:\s+"[^"]*")?\)/g)||[];
+ const source=tokens(local),output=tokens(projected);return source.length===output.length?new Map(output.map((image,i)=>[image,source[i]])):new Map();
+}
+function importMarkdown(scan,text,remotePath,writes,replacements=new Map()){
  const protectedText=[];
  let result=text.replace(/^(`{3,}|~{3,})[^\n]*\n[\s\S]*?^\1\s*$/gm,s=>`\0P${protectedText.push(s)-1}\0`).replace(/`[^`\n]+`/g,s=>`\0P${protectedText.push(s)-1}\0`);
  if(/!\[[^\]]*\]\s*\[[^\]]*\]/.test(result))throw new Error('仓库正文包含引用式图片，请先改为普通 Markdown 图片。');
- result=result.replace(/!\[([^\]]*)\]\((<[^>]+>|[^\s)]+)(?:\s+"[^"]*")?\)/g,(_,alt,target)=>`![${alt}](${importImage(scan,target,remotePath,writes)})`);
+ result=result.replace(/!\[([^\]]*)\]\((<[^>]+>|[^\s)]+)(?:\s+"[^"]*")?\)/g,(full,alt,target)=>replacements.get(full)||`![${alt}](${importImage(scan,target,remotePath,writes)})`);
  return result.replace(/\0P(\d+)\0/g,(_,n)=>protectedText[Number(n)]);
 }
 function importedArticle(scan,u,writes){
  const remote=markdown(u.repo),local=u.local?markdown(u.local):null,doc=local?.doc||parseDocument('');
+ const projected=u.projected?markdown(u.projected):null;
+ const preserveHero=local&&projected&&u.assetsMatch&&canonical(projected.doc.get('heroImage'))===canonical(remote.doc.get('heroImage'));
  for(const key of ['title','description','pubDate','updatedDate','tags','heroImage']){
+  if(key==='heroImage'&&preserveHero&&local.doc.has(key))continue;
   if(remote.doc.has(key))doc.set(key,key==='heroImage'?importImage(scan,String(remote.doc.get(key)),u.remotePath,writes):remote.doc.get(key));else doc.delete(key);
  }
  const publicTags=remote.doc.toJS()?.tags;
@@ -213,7 +220,9 @@ function importedArticle(scan,u,writes){
   doc.set('blogTags',publicTags);doc.set('tags',publicTags.map(tag=>typeof tag==='string'?tag.replace(/\s+/g,'-'):tag));
  }else doc.delete('blogTags');
  doc.set('slug',u.slug);doc.set('draft',false);
- return `---\n${doc.toString()}---\n${importMarkdown(scan,remote.body,u.remotePath,writes)}`;
+ const sameBody=local&&projected&&u.assetsMatch&&canonical(projected.body)===canonical(remote.body);
+ const replacements=local&&projected&&u.assetsMatch?imageReplacements(local.body,projected.body):new Map();
+ return `---\n${doc.toString()}---\n${sameBody?local.body:importMarkdown(scan,remote.body,u.remotePath,writes,replacements)}`;
 }
 export async function synchronize(vault,{base=root,token,choices={}}={}){
  return withSyncLock(vault,async()=>{
@@ -235,7 +244,7 @@ export async function synchronize(vault,{base=root,token,choices={}}={}){
    }else{
     if(!draft)throw new Error('请先更新插件并迁移站点设置。');
     if(u.repo===null)throw new Error(`${u.label} 在仓库中已删除，请选择保留本地内容或恢复仓库文件。`);
-    if(u.kind==='page')draft[u.key]=importMarkdown(scan,u.repo,u.remotePath,writes);
+    if(u.kind==='page')draft[u.key]=importMarkdown(scan,u.repo,u.remotePath,writes,u.assetsMatch&&u.projected?imageReplacements(u.local,u.projected):new Map());
     else{const f=fields.find(f=>f.key===u.key);draft.values[f.label]=f.type==='links'?u.repo.map(v=>typeof v==='string'?v:`${v.label} | ${v.href}`):f.type==='image'?importImage(scan,u.repo,u.remotePath,writes):u.repo;}
     siteChanged=true;
    }
