@@ -15,6 +15,7 @@ export function prepareSite(vault) {
  const configPlan = prepare(vault,settingsFile,{page:true,slug:'site-settings',...(draft?{sourceText:`---\n${stringify(draft.values)}---\n`}:{})});
  const site = {};
  for (const f of fields) {
+  try {
   let value = configPlan.doc.has(f.label) ? configPlan.doc.get(f.label) : f.default;
   if (f.type === 'links') {
    if (value?.toJSON) value=value.toJSON();
@@ -41,12 +42,13 @@ export function prepareSite(vault) {
    }
   }
   site[f.key]=value;
+  } catch(error){error.field=f.label;throw error;}
  }
- for (const k of ['title','author','description','homeHeading','blogHeading','aboutHeading']) if(!site[k].trim()) throw new Error(`请填写 ${fields.find(f=>f.key===k).label}`);
- if(site.commentsEnabled && (!/^[\w.-]+\/[\w.-]+$/.test(site.giscusRepo)||!/^R_[\w-]+$/.test(site.giscusRepoId)||!/^DIC_[\w-]+$/.test(site.giscusCategoryId))) throw new Error('开启评论前，请填写 giscus.app 提供的仓库和分类 ID；还需在 GitHub 安装 Giscus 并开启 Discussions。');
+ for (const k of ['title','author','description','homeHeading','blogHeading','aboutHeading']) if(!site[k].trim()) throw Object.assign(new Error(`请填写 ${fields.find(f=>f.key===k).label}`),{field:fields.find(f=>f.key===k).label});
+ if(site.commentsEnabled && (!/^[\w.-]+\/[\w.-]+$/.test(site.giscusRepo)||!/^R_[\w-]+$/.test(site.giscusRepoId)||!/^DIC_[\w-]+$/.test(site.giscusCategoryId))) throw Object.assign(new Error('开启评论前，请填写 giscus.app 提供的仓库和分类 ID；还需在 GitHub 安装 Giscus 并开启 Discussions。'),{field:'启用评论'});
  const entries=new Map([['src/config/site.json',Buffer.from(JSON.stringify(site,null,2)+'\n')],...configPlan.assets]);
  for (const [file,id,title,description] of [[names[1],'home','首页介绍',site.description],[names[2],'about',site.aboutHeading,site.aboutDescription]]) {
-  const plan=prepare(vault,path.join(vault,'blog',file),{page:true,slug:`site-${id}`,title,description,...(draft?{sourceText:draft[id==='home'?'home':'about']}:{})});
+  let plan;try{plan=prepare(vault,path.join(vault,'blog',file),{page:true,slug:`site-${id}`,title,description,...(draft?{sourceText:draft[id==='home'?'home':'about']}:{})});}catch(error){error.field=id==='home'?'首页介绍':'关于页正文';throw error;}
   entries.set(`src/content/pages/${id}.md`,Buffer.from(plan.build(false)));
   for(const entry of plan.assets) entries.set(...entry);
  }
@@ -60,22 +62,27 @@ export function previewWorkspace() {
  return dest;
 }
 function writeEntries(entries,dest) {for(const [file,data] of entries){fs.mkdirSync(path.dirname(path.join(dest,file)),{recursive:true});fs.writeFileSync(path.join(dest,file),data);}}
-export async function publishSite(plan) {
+export async function publishSite(plan,vault) {
  if(run('git',['branch','--show-current'],root,true)!=='main')throw new Error('发布仓库必须在 main 分支');
  if(run('git',['status','--porcelain'],root,true))throw new Error('仓库有未提交修改，请先处理');
  run('git',['fetch','origin','main']);
  if(run('git',['rev-list','--count','HEAD..origin/main'],root,true)!=='0')throw new Error('远程有新提交，请先同步仓库');
  const ahead=run('git',['log','--format=%s','origin/main..HEAD'],root,true);
  if(ahead&&ahead.split('\n').some(s=>s!==commitMessage))throw new Error('存在其他尚未推送的提交，请先处理');
+ const sync=await import('./sync.mjs');
+ await sync.assertPublishSafe(vault,'site');sync.progress(vault,'building','正在检查并构建站点');
  const mediaConfig=readMediaConfig();const assets=new Map([...plan.entries].filter(([file])=>file.startsWith('public/site/')));const media=siteMedia(plan,mediaConfig,mediaConfig?await optimizeAssets(assets):assets);plan=media.plan;
  const old=new Map([...plan.entries.keys()].map(f=>[f,fs.existsSync(path.join(root,f))?fs.readFileSync(path.join(root,f)):null]));
  let committed=false,staged=false;
  try {
-  writeEntries(plan.entries,root);run('npm',['run','build']);await uploadMedia(media.uploads,mediaConfig);staged=true;
+  writeEntries(plan.entries,root);run('npm',['run','build']);sync.progress(vault,'images','正在上传并校验图片');await uploadMedia(media.uploads,mediaConfig);staged=true;
   run('git',['add','--',...plan.entries.keys()]);
   if(run('git',['diff','--cached','--name-only'],root,true)){run('git',['commit','-m',commitMessage]);committed=true;}
-  run('git',['push','origin','HEAD:main']);
+  sync.progress(vault,'pushing','正在推送 GitHub');run('git',['push','origin','HEAD:main']);
+  sync.progress(vault,'deploying','正在部署到 Cloudflare');
   const deployed=deployPages();
+  await sync.recordPublication(vault,'site',deployed);
+  sync.progress(vault,deployed?'published':'pushed',deployed?'站点已发布':'已推送 GitHub，待确认部署');
   // An already-open preview must not keep showing the version from before publication.
   const preview=path.join(root,'.writing-preview');
   if(fs.existsSync(path.join(preview,'src'))){
@@ -101,6 +108,9 @@ async function main(){
   run('npx',['astro','dev','--background','--host','127.0.0.1','--port','4322'],dest);
   run('open',['http://127.0.0.1:4322/']);return;
  }
- await publishSite(plan);
+ await publishSite(plan,vault);
 }
-if(process.argv[1]&&fs.realpathSync(process.argv[1])===fileURLToPath(import.meta.url))main().catch(e=>{console.error(e.message);process.exitCode=1;});
+if(process.argv[1]&&fs.realpathSync(process.argv[1])===fileURLToPath(import.meta.url)){
+ const action=process.argv[2],vault=process.argv[3];
+ (action==='publish'&&vault?import('./sync.mjs').then(s=>s.withSyncLock(vault,main)):main()).catch(async e=>{if(vault){const s=await import('./sync.mjs');s.progress(vault,'failed',e.message);}console.error(e.message);process.exitCode=1;});
+}

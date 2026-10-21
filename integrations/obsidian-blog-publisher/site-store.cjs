@@ -14,6 +14,21 @@ function saveSite(vault, value) {
  fs.renameSync(temp,target);
 }
 function markdownBody(text) { return text.replace(/^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/,''); }
+function patchSite(vault,base,desired){
+ const current=readSite(vault),merged=JSON.parse(JSON.stringify(current)),external=[];
+ const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+ for(const key of new Set([...Object.keys(base.values),...Object.keys(desired.values)])){
+  const changed=!same(base.values[key],desired.values[key]),outside=!same(base.values[key],current.values[key]);
+  if(changed&&outside&&!same(current.values[key],desired.values[key]))throw new Error(`「${key}」在别处也有修改，当前输入尚未保存。请先复制当前输入，再重新打开设置查看新版本。`);
+  if(changed)merged.values[key]=desired.values[key];else if(outside)external.push(key);
+ }
+ for(const key of ['home','about']){
+  const changed=!same(base[key],desired[key]),outside=!same(base[key],current[key]);
+  if(changed&&outside&&!same(current[key],desired[key]))throw new Error(`${key==='home'?'首页介绍':'关于页正文'}在别处也有修改，当前输入尚未保存。请先复制当前输入，再重新打开设置查看新版本。`);
+  if(changed)merged[key]=desired[key];else if(outside)external.push(key==='home'?'首页介绍':'关于页正文');
+ }
+ saveSite(vault,merged);return {value:merged,external};
+}
 function migrateSite(vault, parseYaml, fallback) {
  if (!fs.existsSync(storagePath(vault))) {
   const draft={version:1,values:{...fallback.values},home:fallback.home,about:fallback.about};
@@ -42,4 +57,4 @@ function migrateSite(vault, parseYaml, fallback) {
  }
  return draft;
 }
-module.exports={storagePath,readSite,saveSite,migrateSite,markdownBody};
+module.exports={storagePath,readSite,saveSite,patchSite,migrateSite,markdownBody};

@@ -54,6 +54,14 @@ test('invalid stored drafts never fall back to stale notes, and failed migration
   assert.throws(()=>prepareSite(f.vault));assert.throws(()=>siteStore.migrateSite(f.vault,parse,{}));assert.ok(fs.existsSync(settings));
  }finally{f.clean();}
 });
+test('settings autosave preserves unrelated external edits and refuses same-field overwrites',()=>{
+ const f=fixture();try{
+  const base=siteStore.migrateSite(f.vault,parse,{values:{},home:'',about:''}),desired=JSON.parse(JSON.stringify(base)),outside=JSON.parse(JSON.stringify(base));
+  desired.values['作者名称']='本地作者';outside.home='别处更新的首页';siteStore.saveSite(f.vault,outside);
+  const saved=siteStore.patchSite(f.vault,base,desired);assert.equal(saved.value.home,'别处更新的首页');assert.equal(saved.value.values['作者名称'],'本地作者');
+  desired.home='本地也改了首页';assert.throws(()=>siteStore.patchSite(f.vault,base,desired),/别处也有修改/);assert.equal(siteStore.readSite(f.vault).home,'别处更新的首页');
+ }finally{f.clean();}
+});
 test('invalid CSS, links, domain, boolean, dimensions and incomplete comments fail before export',()=>{
  for(const overrides of [{'浅色强调色':'red;display:none'},{'导航链接':['Bad | javascript:alert(1)']},{'正式网址':'https://example.com/subpath'},{'页面宽度':20000},{'显示RSS入口':'false'},{'启用评论':true}]){
   const f=fixture(overrides);try{assert.throws(()=>prepareSite(f.vault));}finally{f.clean();}
@@ -63,7 +71,7 @@ function remoteFixture(){
  const f=fixture({'博客标题':'站点发布测试'});const dir=fs.mkdtempSync(path.join(os.tmpdir(),'site-publish-'));const repo=path.join(dir,'repo'),remote=path.join(dir,'remote.git');fs.mkdirSync(repo);fs.mkdirSync(path.join(repo,'scripts'));
  const git=(args,cwd=repo)=>{const r=spawnSync('git',args,{cwd,encoding:'utf8'});assert.equal(r.status,0,r.stderr);return r.stdout.trim();};
  git(['init','--bare',remote],dir);git(['init','-b','main']);git(['config','user.name','Test']);git(['config','user.email','test@example.invalid']);
- for(const file of ['obsidian.mjs','site.mjs','media.mjs','deploy.mjs'])fs.copyFileSync(path.join(root,'scripts',file),path.join(repo,'scripts',file));
+ for(const file of ['obsidian.mjs','site.mjs','media.mjs','deploy.mjs','sync.mjs','github-transport.mjs'])fs.copyFileSync(path.join(root,'scripts',file),path.join(repo,'scripts',file));
  fs.cpSync(path.join(root,'integrations'),path.join(repo,'integrations'),{recursive:true});fs.symlinkSync(path.join(root,'node_modules'),path.join(repo,'node_modules'),'dir');fs.writeFileSync(path.join(repo,'.gitignore'),'node_modules\n');fs.writeFileSync(path.join(repo,'package.json'),JSON.stringify({type:'module',scripts:{build:'node -e "process.exit(Number(process.env.TEST_BUILD_EXIT || 0))"'}}));
  git(['add','.']);git(['commit','-m','setup']);git(['remote','add','origin',remote]);git(['push','-u','origin','main']);
  return {git,repo,remote,vault:f.vault,invoke:(env={})=>spawnSync(process.execPath,[path.join(repo,'scripts/site.mjs'),'publish',f.vault],{cwd:repo,encoding:'utf8',env:{...process.env,...env}}),clean:()=>{f.clean();fs.rmSync(dir,{recursive:true,force:true});}};
