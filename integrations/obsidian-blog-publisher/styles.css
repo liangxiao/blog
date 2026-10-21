@@ -21,6 +21,27 @@
 .blog-image-option small { color:var(--text-muted); }
 .blog-image-detail { display:block; max-width:100%; max-height:320px; margin:0 auto; object-fit:contain; }
 .blog-conflicts { width:min(1000px,90vw); }
+.blog-toolbar { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:8px 0; }
+.blog-muted { color:var(--text-muted); font-size:var(--font-ui-small); }
+.blog-settings-actions { padding:0 0 8px; }
+.blog-sync-status { margin:12px 0; padding:10px 12px; line-height:1.5; }
+.blog-sync-status > strong { color:var(--text-normal); }
+.blog-sync-status button { font-size:var(--font-ui-small); }
+.blog-settings details > summary, .blog-operation details > summary { cursor:pointer; color:var(--text-muted); padding:6px 0; }
+.blog-settings-tabs { margin:14px 0 16px; }
+.blog-page-tabs { margin:0 0 16px; }
+.blog-page-preview { margin-bottom:20px; }
+.blog-page-preview .blog-markdown-preview { margin:6px 0 0; }
+.blog-setting-image { padding:0 0 16px; color:var(--text-muted); }
+.blog-setting-image img { max-width:220px; max-height:100px; object-fit:contain; border-radius:6px; }
+.blog-operation { width:min(620px,90vw); }
+.blog-operation-summary { padding:16px; background:var(--background-secondary); border-radius:8px; overflow-wrap:anywhere; }
+.blog-operation-summary a { display:block; margin-top:12px; }
+.blog-operation-summary p { margin-bottom:0; }
+.blog-operation-steps { display:flex; flex-wrap:wrap; gap:10px 24px; list-style:none; padding:0; margin:18px 0; color:var(--text-faint); font-size:var(--font-ui-small); }
+.blog-operation-steps .is-current { color:var(--text-normal); font-weight:600; }
+.blog-operation-steps .is-done { color:var(--text-success); }
+.blog-operation-details pre { max-height:260px; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; font-size:var(--font-ui-small); }
 .blog-diff-columns { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
 .blog-diff-columns > div { min-width:0; }
 .blog-diff-columns pre { white-space:pre-wrap; overflow-wrap:anywhere; max-height:260px; overflow:auto; padding:12px; background:var(--background-secondary); font-size:var(--font-ui-small); }
