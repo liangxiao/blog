@@ -4,12 +4,15 @@ import { fileURLToPath } from 'node:url';
 import { prepare, root, run } from './obsidian.mjs';
 import { readMediaConfig, siteMedia, uploadMedia, optimizeAssets } from './media.mjs';
 import { deployPages } from './deploy.mjs';
+import { stringify } from 'yaml';
+import siteStore from '../integrations/obsidian-blog-publisher/site-store.cjs';
 export const fields = JSON.parse(fs.readFileSync(new URL('../integrations/obsidian-blog-publisher/site-fields.json', import.meta.url),'utf8'));
 const names = ['站点设置.md','首页介绍.md','关于.md'];
 const commitMessage = 'content: publish site settings';
 export function prepareSite(vault) {
+ const draft=fs.existsSync(siteStore.storagePath(vault))?siteStore.readSite(vault):null;
  const settingsFile = path.join(vault,'blog',names[0]);
- const configPlan = prepare(vault,settingsFile,{page:true,slug:'site-settings'});
+ const configPlan = prepare(vault,settingsFile,{page:true,slug:'site-settings',...(draft?{sourceText:`---\n${stringify(draft.values)}---\n`}:{})});
  const site = {};
  for (const f of fields) {
   let value = configPlan.doc.has(f.label) ? configPlan.doc.get(f.label) : f.default;
@@ -43,7 +46,7 @@ export function prepareSite(vault) {
  if(site.commentsEnabled && (!/^[\w.-]+\/[\w.-]+$/.test(site.giscusRepo)||!/^R_[\w-]+$/.test(site.giscusRepoId)||!/^DIC_[\w-]+$/.test(site.giscusCategoryId))) throw new Error('开启评论前，请填写 giscus.app 提供的仓库和分类 ID；还需在 GitHub 安装 Giscus 并开启 Discussions。');
  const entries=new Map([['src/config/site.json',Buffer.from(JSON.stringify(site,null,2)+'\n')],...configPlan.assets]);
  for (const [file,id,title,description] of [[names[1],'home','首页介绍',site.description],[names[2],'about',site.aboutHeading,site.aboutDescription]]) {
-  const plan=prepare(vault,path.join(vault,'blog',file),{page:true,slug:`site-${id}`,title,description});
+  const plan=prepare(vault,path.join(vault,'blog',file),{page:true,slug:`site-${id}`,title,description,...(draft?{sourceText:draft[id==='home'?'home':'about']}:{})});
   entries.set(`src/content/pages/${id}.md`,Buffer.from(plan.build(false)));
   for(const entry of plan.assets) entries.set(...entry);
  }

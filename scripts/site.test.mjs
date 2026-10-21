@@ -4,7 +4,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { stringify } from 'yaml';
+import { parse, stringify } from 'yaml';
+import siteStore from '../integrations/obsidian-blog-publisher/site-store.cjs';
 import { fields, prepareSite } from './site.mjs';
 import { root } from './obsidian.mjs';
 function fixture(overrides={}){
@@ -25,6 +26,34 @@ test('site image selection and page images share scoped exported assets',()=>{
  const f=fixture({'首页封面':'blog/cover.png','默认文章封面':'blog/cover.png'});
  try{fs.writeFileSync(path.join(f.vault,'blog/cover.png'),'image');fs.appendFileSync(path.join(f.vault,'blog/关于.md'),'\n![[cover.png]]');const p=prepareSite(f.vault);assert.equal(p.entries.size,4);assert.equal(p.site.homeCover,p.site.defaultCover);assert.match(p.site.homeCover,/^\/site\//);assert.match(p.entries.get('src/content/pages/about.md').toString(),/!\[cover\]\(\/site\//);}finally{f.clean();}
 });
+test('migration preserves existing settings, Markdown and relative images outside the article list',()=>{
+ const f=fixture({'博客标题':'保留原博客','首页封面':'assets/pic.png','启用评论':true,'评论仓库ID':'R_abcdef','评论分类ID':'DIC_abcdef'});
+ try{
+  fs.mkdirSync(path.join(f.vault,'blog/assets'));fs.writeFileSync(path.join(f.vault,'blog/assets/pic.png'),'picture');
+  fs.writeFileSync(path.join(f.vault,'blog/首页介绍.md'),'---\ntitle: 首页介绍\n---\n原来的首页\n![](assets/pic.png)');
+  fs.writeFileSync(path.join(f.vault,'blog/使用说明.md'),'PRIVATE_GUIDE');
+  const before=prepareSite(f.vault);
+  siteStore.migrateSite(f.vault,parse,{values:{},home:'fallback',about:'fallback'});
+  const after=prepareSite(f.vault);
+  assert.deepEqual(after,before);
+  assert.equal(fs.existsSync(path.join(f.vault,'blog/首页介绍.md')),false);
+  assert.match(fs.readFileSync(path.join(f.vault,'.obsidian/plugins/local-blog-publisher/legacy-site-notes/首页介绍.md'),'utf8'),/原来的首页/);
+  assert.equal(fs.readFileSync(path.join(f.vault,'blog/private.md'),'utf8'),'PRIVATE_DRAFT');
+  const draft=siteStore.readSite(f.vault);draft.home='设置窗口中的新介绍';draft.values['博客标题']='新标题';siteStore.saveSite(f.vault,draft);
+  siteStore.migrateSite(f.vault,parse,{values:{},home:'wrong',about:'wrong'});
+  const updated=prepareSite(f.vault);assert.equal(updated.site.title,'新标题');assert.match(updated.entries.get('src/content/pages/home.md').toString(),/设置窗口中的新介绍/);
+  assert.doesNotMatch([...updated.entries.values()].join(''),/PRIVATE_GUIDE|PRIVATE_DRAFT|原来的首页/);
+ }finally{f.clean();}
+});
+test('invalid stored drafts never fall back to stale notes, and failed migration leaves originals intact',()=>{
+ const f=fixture();
+ try{
+  const settings=path.join(f.vault,'blog/站点设置.md');fs.writeFileSync(settings,'not frontmatter');
+  assert.throws(()=>siteStore.migrateSite(f.vault,parse,{values:{},home:'',about:''}));assert.equal(fs.readFileSync(settings,'utf8'),'not frontmatter');
+  fs.mkdirSync(path.dirname(siteStore.storagePath(f.vault)),{recursive:true});fs.writeFileSync(siteStore.storagePath(f.vault),'{broken');
+  assert.throws(()=>prepareSite(f.vault));assert.throws(()=>siteStore.migrateSite(f.vault,parse,{}));assert.ok(fs.existsSync(settings));
+ }finally{f.clean();}
+});
 test('invalid CSS, links, domain, boolean, dimensions and incomplete comments fail before export',()=>{
  for(const overrides of [{'浅色强调色':'red;display:none'},{'导航链接':['Bad | javascript:alert(1)']},{'正式网址':'https://example.com/subpath'},{'页面宽度':20000},{'显示RSS入口':'false'},{'启用评论':true}]){
   const f=fixture(overrides);try{assert.throws(()=>prepareSite(f.vault));}finally{f.clean();}
@@ -37,8 +66,18 @@ function remoteFixture(){
  for(const file of ['obsidian.mjs','site.mjs','media.mjs','deploy.mjs'])fs.copyFileSync(path.join(root,'scripts',file),path.join(repo,'scripts',file));
  fs.cpSync(path.join(root,'integrations'),path.join(repo,'integrations'),{recursive:true});fs.symlinkSync(path.join(root,'node_modules'),path.join(repo,'node_modules'),'dir');fs.writeFileSync(path.join(repo,'.gitignore'),'node_modules\n');fs.writeFileSync(path.join(repo,'package.json'),JSON.stringify({type:'module',scripts:{build:'node -e "process.exit(Number(process.env.TEST_BUILD_EXIT || 0))"'}}));
  git(['add','.']);git(['commit','-m','setup']);git(['remote','add','origin',remote]);git(['push','-u','origin','main']);
- return {git,repo,remote,invoke:(env={})=>spawnSync(process.execPath,[path.join(repo,'scripts/site.mjs'),'publish',f.vault],{cwd:repo,encoding:'utf8',env:{...process.env,...env}}),clean:()=>{f.clean();fs.rmSync(dir,{recursive:true,force:true});}};
+ return {git,repo,remote,vault:f.vault,invoke:(env={})=>spawnSync(process.execPath,[path.join(repo,'scripts/site.mjs'),'publish',f.vault],{cwd:repo,encoding:'utf8',env:{...process.env,...env}}),clean:()=>{f.clean();fs.rmSync(dir,{recursive:true,force:true});}};
 }
+test('publication reads the saved settings form with no configuration notes in blog',()=>{
+ const t=remoteFixture();
+ try{
+  const draft=siteStore.migrateSite(t.vault,parse,{values:{},home:'',about:''});draft.home='设置窗口里填写的新首页';draft.values['博客标题']='表单发布';siteStore.saveSite(t.vault,draft);
+  const r=t.invoke();assert.equal(r.status,0,r.stderr);assert.match(fs.readFileSync(path.join(t.repo,'src/content/pages/home.md'),'utf8'),/设置窗口里填写的新首页/);
+  assert.equal(JSON.parse(fs.readFileSync(path.join(t.repo,'src/config/site.json'),'utf8')).title,'表单发布');
+  assert.equal(t.git(['rev-parse','HEAD']),t.git(['rev-parse','refs/heads/main'],t.remote));
+  assert.equal(t.git(['status','--porcelain']),'');
+ }finally{t.clean();}
+});
 test('site publication pushes exactly the three site files',()=>{const t=remoteFixture();try{const r=t.invoke();assert.equal(r.status,0,r.stderr);assert.deepEqual(t.git(['diff-tree','--no-commit-id','--name-only','-r','HEAD']).split('\n'),['src/config/site.json','src/content/pages/about.md','src/content/pages/home.md']);assert.equal(t.git(['status','--porcelain']),'');}finally{t.clean();}});
 test('site preview stays unchanged on failure and refreshes after successful publication',()=>{
  const t=remoteFixture();
