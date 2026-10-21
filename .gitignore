@@ -36,3 +36,6 @@ integrations/obsidian-blog-publisher/data.json
 # Machine-only image hosting settings; OAuth credentials live outside the vault
 .blog-media.json
 .wrangler/
+
+# Machine-only Cloudflare Pages direct deployment
+.blog-deploy.json

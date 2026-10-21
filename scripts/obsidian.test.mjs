@@ -42,8 +42,9 @@ function publicationFixture() {
  git(['init','--bare',remote],dir);git(['init','-b','main']);git(['config','user.name','Test']);git(['config','user.email','test@example.invalid']);
  fs.copyFileSync(path.join(root,'scripts/obsidian.mjs'),path.join(repo,'scripts/obsidian.mjs'));
  fs.copyFileSync(path.join(root,'scripts/media.mjs'),path.join(repo,'scripts/media.mjs'));
+ fs.copyFileSync(path.join(root,'scripts/deploy.mjs'),path.join(repo,'scripts/deploy.mjs'));
  fs.symlinkSync(path.join(root,'node_modules'),path.join(repo,'node_modules'),'dir');
- fs.writeFileSync(path.join(repo,'.gitignore'),'node_modules/\n');
+ fs.writeFileSync(path.join(repo,'.gitignore'),'node_modules\n');
  fs.writeFileSync(path.join(repo,'package.json'),JSON.stringify({type:'module',scripts:{build:'node -e "process.exit(Number(process.env.TEST_BUILD_EXIT || 0))"'}}));
  git(['add','.']);git(['commit','-m','setup']);git(['remote','add','origin',remote]);git(['push','-u','origin','main']);
  const f=fixture('![[pic.png]]');
@@ -68,5 +69,17 @@ test('R2 public access failure after build rolls back the article without publis
   const original=fs.readFileSync(t.f.source,'utf8'),head=t.git(['rev-parse','HEAD']);
   const r=t.invoke({NODE_OPTIONS:`--import=${preload}`});assert.notEqual(r.status,0);assert.match(r.stderr,/图床公开访问失败/);
   assert.equal(t.git(['rev-parse','HEAD']),head);assert.equal(t.git(['status','--porcelain']),'');assert.equal(fs.readFileSync(t.f.source,'utf8'),original);
+ }finally{t.clean();}
+});
+test('failed Pages deployment preserves the GitHub commit and can be retried before marking the source published',()=>{
+ const t=publicationFixture();
+ try{
+  fs.appendFileSync(path.join(t.repo,'.gitignore'),'.blog-deploy.json\n');t.git(['add','.gitignore']);t.git(['commit','-m','ignore local deployment config']);t.git(['push']);
+  fs.writeFileSync(path.join(t.repo,'.blog-deploy.json'),JSON.stringify({enabled:true,accountId:'a'.repeat(32),project:'test-blog',branch:'main'}));
+  fs.unlinkSync(path.join(t.repo,'node_modules'));fs.mkdirSync(path.join(t.repo,'node_modules/wrangler/bin'),{recursive:true});fs.symlinkSync(path.join(root,'node_modules/yaml'),path.join(t.repo,'node_modules/yaml'),'dir');
+  const wrangler=path.join(t.repo,'node_modules/wrangler/bin/wrangler.js');fs.writeFileSync(wrangler,'process.exit(1);');
+  const original=fs.readFileSync(t.f.source,'utf8');const r=t.invoke();assert.notEqual(r.status,0);assert.match(r.stderr,/Cloudflare 部署未完成/);
+  assert.equal(t.git(['rev-parse','HEAD']),t.git(['rev-parse','refs/heads/main'],t.remote));assert.equal(t.git(['status','--porcelain']),'');assert.equal(fs.readFileSync(t.f.source,'utf8'),original);
+  fs.writeFileSync(wrangler,'process.exit(0);');const retried=t.invoke();assert.equal(retried.status,0,retried.stderr);assert.match(fs.readFileSync(t.f.source,'utf8'),/draft: false/);
  }finally{t.clean();}
 });

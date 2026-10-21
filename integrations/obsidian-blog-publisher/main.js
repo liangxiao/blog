@@ -6,7 +6,7 @@ class Confirm extends Modal {
  constructor(app, file, action, site = false) { super(app); this.file = file; this.action = action; this.site = site; }
  onOpen() {
   this.contentEl.createEl('h3', { text: '发布到公开博客' });
-  this.contentEl.createEl('p', { text: this.site ? "同步站点设置、首页介绍、关于页及引用的图片。文章和其他笔记不会一并发布。构建通过后推送 GitHub。" : `只同步「${this.file.basename}」和它引用的图片。其他笔记不会被提交。构建通过后会推送 GitHub，并触发 Cloudflare 部署。` });
+  this.contentEl.createEl('p', { text: this.site ? "同步站点设置、首页介绍、关于页及引用的图片。文章和其他笔记不会一并发布。构建通过后推送 GitHub，并上传到 Cloudflare Pages。" : `只同步「${this.file.basename}」和它引用的图片。其他笔记不会被提交。构建通过后推送 GitHub，并上传到 Cloudflare Pages。` });
   new Setting(this.contentEl).addButton(b => b.setButtonText(this.site ? '发布站点设置' : '发布这篇文章').setCta().onClick(() => { this.close(); this.action(); })).addButton(b => b.setButtonText('取消').onClick(() => this.close()));
  }
 }

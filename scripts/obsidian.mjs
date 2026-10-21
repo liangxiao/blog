@@ -5,6 +5,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { parseDocument } from 'yaml';
 import { readMediaConfig, articleMedia, uploadMedia } from './media.mjs';
+import { deployPages } from './deploy.mjs';
 
 export const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export function run(bin, args, cwd = root, capture = false) {
@@ -131,11 +132,12 @@ async function main() {
    committed = true;
   }
   run('git',['push','origin','HEAD:main']);
+  const deployed = deployPages();
   if (fs.readFileSync(source,'utf8') === plan.original) {
    plan.doc.set('draft',false);
    fs.writeFileSync(source,`---\n${plan.doc.toString()}---\n${plan.bodyOriginal}`);
   }
-  console.log('已推送 GitHub；请等待 Cloudflare 构建。网站上线状态尚未确认。');
+  console.log(deployed ? '文章已推送 GitHub，并完成 Cloudflare 部署提交。' : '文章已推送 GitHub。');
  } finally {
   if (!committed) {
    if (staged) run('git',['reset','--',article,...plan.assets.keys()]);
