@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { prepare, root, run } from './obsidian.mjs';
 import { readMediaConfig, siteMedia, uploadMedia } from './media.mjs';
+import { deployPages } from './deploy.mjs';
 export const fields = JSON.parse(fs.readFileSync(new URL('../integrations/obsidian-blog-publisher/site-fields.json', import.meta.url),'utf8'));
 const names = ['站点设置.md','首页介绍.md','关于.md'];
 const commitMessage = 'content: publish site settings';
@@ -70,7 +71,7 @@ export async function publishSite(plan) {
   writeEntries(plan.entries,root);run('npm',['run','build']);await uploadMedia(media.uploads,mediaConfig);staged=true;
   run('git',['add','--',...plan.entries.keys()]);
   if(run('git',['diff','--cached','--name-only'],root,true)){run('git',['commit','-m',commitMessage]);committed=true;}
-  run('git',['push','origin','HEAD:main']);console.log('站点设置已推送 GitHub，等待 Cloudflare 构建。');
+  run('git',['push','origin','HEAD:main']);deployPages();console.log('站点设置发布操作完成。');
  } finally {
   if(!committed){if(staged)run('git',['reset','--',...plan.entries.keys()]);for(const [f,data]of old){if(data)fs.writeFileSync(path.join(root,f),data);else fs.rmSync(path.join(root,f),{force:true});}}
  }

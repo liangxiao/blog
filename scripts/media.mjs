@@ -75,7 +75,7 @@ if (process.argv[1] && fs.realpathSync(process.argv[1]) === fileURLToPath(import
  const action=process.argv[2];
  try {
   if(action==='login') {
-   const result=spawnSync(process.execPath,[path.join(root,'node_modules/wrangler/bin/wrangler.js'),'login','--scopes','account:read','user:read','workers:write'],{cwd:root,stdio:'inherit',env:{...process.env,WRANGLER_SEND_METRICS:'false'}});
+   const result=spawnSync(process.execPath,[path.join(root,'node_modules/wrangler/bin/wrangler.js'),'login','--scopes','account:read','user:read','workers:write','pages:write'],{cwd:root,stdio:'inherit',env:{...process.env,WRANGLER_SEND_METRICS:'false'}});
    if(result.status!==0)throw new Error('Cloudflare 授权尚未完成，请重试。');
   } else if(action==='status') {
    const config=readMediaConfig();
