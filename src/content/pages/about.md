@@ -5,7 +5,7 @@ description: 关于我和这个博客
 
 ## 我是谁
 
-xiao liang，在券商从事 AI 相关工作，正在搭建基于 deepagents 的投研 Agent。
+一个老菜鸟，在券商从事 AI 相关工作
 
 ## 这里会写什么
 
