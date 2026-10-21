@@ -12,34 +12,58 @@ class Confirm extends Modal {
  }
 }
 class Log extends Modal {
- onOpen() { this.contentEl.createEl('h3', { text: '博客操作日志' }); this.pre = this.contentEl.createEl('pre'); this.pre.style.whiteSpace = 'pre-wrap'; }
- append(text) { this.pre.textContent = (this.pre.textContent + text).slice(-30000); this.pre.scrollIntoView({ block:'end' }); }
- published(repoPath) {
-  const summary=this.contentEl.createDiv();this.pre.before(summary);
+ constructor(app,options={}){super(app);this.options=options;this.output='';this.state={message:'正在准备…'};}
+ onOpen(){
+  this.contentEl.empty();this.modalEl.addClass('blog-operation');
+  this.contentEl.createEl('h2',{text:this.options.title||'同步博客'});
+  if(this.options.subject)this.contentEl.createEl('p',{text:this.options.subject,cls:'blog-muted'});
+  this.summary=this.contentEl.createDiv({cls:'blog-operation-summary'});
+  this.steps=this.contentEl.createEl('ol',{cls:'blog-operation-steps'});
+  this.steps.hidden=!this.options.publish;
+  const details=this.contentEl.createEl('details',{cls:'blog-operation-details'});details.createEl('summary',{text:'查看详细日志'});
+  this.pre=details.createEl('pre',{text:this.output});this.details=details;
+  this.footer=this.contentEl.createDiv({cls:'blog-toolbar'});this.render();
+ }
+ append(text){this.output=(this.output+text).slice(-30000);if(this.pre){const follow=this.pre.scrollHeight-this.pre.scrollTop-this.pre.clientHeight<40;this.pre.setText(this.output);if(follow)this.pre.scrollTop=this.pre.scrollHeight;}}
+ progress(value){if(['building','images','pushing','deploying'].includes(value.stage))this.lastStage=value.stage;this.state=value;this.render();}
+ render(){
+  if(!this.summary)return;this.summary.empty();this.steps.empty();this.footer.empty();
+  this.summary.createEl('strong',{text:this.state.message});
+  if(this.options.publish){
+   const stages=[['building','检查与构建'],['images','压缩与上传图片'],['pushing','推送 GitHub'],['deploying','部署网站']];
+   const active=stages.findIndex(([id])=>id===this.lastStage),complete=this.finished&&this.ok;
+   for(const [i,[,label]]of stages.entries()){
+    const done=complete?(this.state.stage==='pushed'?i<3:true):i<active,current=!this.finished&&i===active;
+    this.steps.createEl('li',{text:`${done?'✓ ':current?'进行中 · ':''}${label}`,cls:done?'is-done':current?'is-current':''});
+   }
+  }
+  if(this.url)this.summary.createEl('a',{text:this.options.publish?'查看已发布内容 ↗':'打开本地预览 ↗',attr:{href:this.url,target:'_blank',rel:'noopener noreferrer'}});
+  if(this.finished&&!this.ok){this.summary.createEl('p',{text:this.error||'展开详细日志查看原因；修正后可以重试。'});this.details.open=true;}
+  else if(!this.finished)this.summary.createEl('p',{text:'可以关闭此窗口，操作会继续；从博客菜单可再次查看。',cls:'blog-muted'});
+  if(this.finished&&!this.ok&&this.options.retry)this.footer.createEl('button',{text:'重新检查并重试'}).addEventListener('click',()=>{this.close();this.options.retry();});
+  this.footer.createEl('button',{text:this.finished?'关闭':'后台继续'}).addEventListener('click',()=>this.close());
+ }
+ finish(ok,{message,url,error}={}){this.finished=true;this.ok=ok;this.url=url;this.error=error;this.state={...this.state,message:message||(ok?'操作完成':'操作未完成')};this.render();}
+ published(repoPath,slug){
   let deploy,site;
   try{deploy=JSON.parse(fs.readFileSync(path.join(repoPath,'.blog-deploy.json'),'utf8'));}catch{}
   try{site=JSON.parse(fs.readFileSync(path.join(repoPath,'src/config/site.json'),'utf8'));}catch{}
-  summary.createEl('h2',{text:deploy?.enabled===true?'已推送 GitHub，并提交 Cloudflare 部署':'已推送 GitHub'});
-  if(deploy?.enabled!==true)summary.createEl('p',{text:'本机未启用直接部署，请确认 Cloudflare 的自动部署状态。'});
-  let url;try{url=new URL(site?.url);}catch{}
-  if(url?.protocol==='https:'&&!url.username&&!url.password){
-   summary.createEl('a',{text:`查看正式网站：${url.origin}`,attr:{href:url.origin,target:'_blank',rel:'noopener noreferrer'}});
-  }
-  summary.createEl('p',{text:'127.0.0.1:4322 是本地预览地址。修改内容后，点击预览或发布才会更新网页。'});
-  summary.scrollIntoView({block:'start'});
+  let url;try{const base=new URL(site?.url);if(base.protocol==='https:'&&!base.username&&!base.password)url=new URL(slug?`blog/${encodeURIComponent(slug)}/`:'',base.href.replace(/\/?$/,'/')).href;}catch{}
+  this.finish(true,{message:deploy?.enabled===true?'已发布到正式网站':'已推送 GitHub，等待网站部署',...(deploy?.enabled===true?{url}:{})});
  }
 }
 class NewPost extends Modal {
- constructor(app) { super(app); this.title = ''; }
+ constructor(app) { super(app); this.title = ''; this.description=''; }
  onOpen() {
   this.contentEl.createEl('h3', { text:'新建博客文章' });
-  new Setting(this.contentEl).setName('标题').addText(t => t.onChange(v => this.title = v));
+  new Setting(this.contentEl).setName('标题').addText(t => {t.setPlaceholder('这篇文章叫什么？').onChange(v => this.title = v);setTimeout(()=>t.inputEl.focus(),0);});
+  new Setting(this.contentEl).setName('摘要').setDesc('显示在文章列表中，也可以写完正文后再补。').addTextArea(t=>t.setPlaceholder('用一两句话介绍文章').onChange(v=>this.description=v));
   new Setting(this.contentEl).addButton(b => b.setButtonText('创建草稿').setCta().onClick(async () => {
    if (!this.title.trim()) return new Notice('请填写标题');
    const date = new Intl.DateTimeFormat('en-CA', {timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
    const slug = `post-${Date.now()}`;
    if (!this.app.vault.getAbstractFileByPath('blog')) await this.app.vault.createFolder('blog');
-   const f = await this.app.vault.create(`blog/${slug}.md`, `---\ntitle: ${JSON.stringify(this.title.trim())}\nslug: ${slug}\ndescription: ""\npubDate: ${date}\ntags: []\nheroImage: ""\ndraft: true\n---\n\n`);
+   const f = await this.app.vault.create(`blog/${slug}.md`, `---\ntitle: ${JSON.stringify(this.title.trim())}\nslug: ${slug}\ndescription: ${JSON.stringify(this.description.trim())}\npubDate: ${date}\ntags: []\nheroImage: ""\ndraft: true\n---\n\n`);
    this.close(); await this.app.workspace.getLeaf().openFile(f);
   }));
  }
@@ -92,14 +116,26 @@ class BlogMenu extends Modal {
  constructor(app,plugin){super(app);this.plugin=plugin;}
  onOpen(){
   this.contentEl.createEl('h2',{text:'博客'});
-  for(const [name,desc,action] of [
-   ['新建文章','在 blog 文件夹创建 Markdown 草稿',()=>new NewPost(this.app).open()],
-   ['预览当前文章','查看当前文章的网页效果',()=>this.plugin.current('preview')],
-   ['发布当前文章','推送 GitHub 并部署到正式网站',()=>this.plugin.current('publish')],
-   ['选择文章封面','选择知识库中的图片',()=>this.plugin.chooseImage()],
-   ['站点设置','首页、关于、图片、外观、评论与发布',()=>this.plugin.openSettings()]
-  ])new Setting(this.contentEl).setName(name).setDesc(desc).addButton(b=>b.setButtonText('打开').onClick(()=>{this.close();action();}));
+  const file=this.app.workspace.getActiveFile(),article=this.plugin.isArticle(file);
+  if(article){
+   const fm=this.app.metadataCache.getFileCache(file)?.frontmatter||{};
+   this.contentEl.createEl('h3',{text:fm.title||file.basename});
+   this.contentEl.createEl('p',{text:fm.draft===true?'本地草稿 · 预览满意后即可发布':'博客文章 · 发布会更新这篇文章',cls:'blog-muted'});
+   const bar=this.contentEl.createDiv({cls:'blog-toolbar'});
+   for(const [label,action]of [['预览文章',()=>this.plugin.current('preview')],['发布文章',()=>this.plugin.current('publish')],['更换封面',()=>this.plugin.chooseImage()]])bar.createEl('button',{text:label,cls:label==='发布文章'?'mod-cta':''}).addEventListener('click',()=>{this.close();action();});
+  }else this.contentEl.createEl('p',{text:'打开 blog 文件夹中的文章，即可在这里预览、发布和设置封面。',cls:'blog-muted'});
+  for(const [name,desc,label,action]of [
+   ['写一篇文章','在 blog 文件夹创建 Markdown 草稿','新建草稿',()=>new NewPost(this.app).open()],
+   ['管理网站','首页、关于、图片、外观与评论','站点设置',()=>this.plugin.openSettings()]
+  ])new Setting(this.contentEl).setName(name).setDesc(desc).addButton(b=>b.setButtonText(label).onClick(()=>{this.close();action();}));
+  if(this.plugin.operationLog)new Setting(this.contentEl).setName(this.plugin.busy?'博客操作正在进行':'最近一次操作').addButton(b=>b.setButtonText('查看进度与结果').onClick(()=>{this.close();this.plugin.operationLog.open();}));
  }
+}
+class SettingsFinder extends FuzzySuggestModal {
+ constructor(app,plugin){super(app);this.plugin=plugin;this.setPlaceholder('搜索设置：封面、首页介绍、评论、页脚…');}
+ getItems(){return [...fields.map(f=>({label:f.label,section:sectionFor(f.label)})),{label:'首页介绍',section:'页面内容'},{label:'关于页正文',section:'页面内容'},{label:'Cloudflare R2 图床',section:'图片与图床'},{label:'同步备份',section:'高级'}];}
+ getItemText(item){return `${item.label} · ${item.section}`;}
+ onChooseItem(item){this.plugin.openSettings(item.label);}
 }
 module.exports = class BlogPublisher extends Plugin {
  async onload() {
@@ -120,9 +156,10 @@ module.exports = class BlogPublisher extends Plugin {
   this.addCommand({id:'publish',name:'发布当前文章',callback:()=>this.current('publish')});
  }
  openSettings(field){
-  if(field){this.settingsTab.focusField=field;this.settingsTab.section=sectionFor(field);}
+  if(field){this.settingsTab.focusField=field;this.settingsTab.section=sectionFor(field);this.settingsTab.pageSection=field.startsWith('关于')?'关于页':field.startsWith('文章列表')?'文章列表':'首页';}
   this.app.setting.open();this.app.setting.openTabById(this.manifest.id);
  }
+ isArticle(file){return file?.path.startsWith('blog/')&&file.extension==='md'&&!['站点设置','首页介绍','关于','使用说明','站点管理使用说明'].includes(file.basename);}
  rpc(action,arg){
   return new Promise((resolve,reject)=>{
    const vault=this.app.vault.adapter.getBasePath(),args=[path.join(this.config.repoPath,'scripts/sync.mjs'),action,vault];if(arg!==undefined)args.push(typeof arg==='string'?arg:JSON.stringify(arg));
@@ -143,11 +180,11 @@ module.exports = class BlogPublisher extends Plugin {
   if(this.busy||this.checking)return new Notice('博客操作正在进行，请稍后重试');
   const view=this.app.workspace.getActiveViewOfType(require('obsidian').MarkdownView);
   try{if(view?.file?.path.startsWith('blog/'))await view.save();}catch(error){return new Notice(`保存文章失败：${error.message}`);}
-  this.busy=true;const log=new Log(this.app);log.open();log.append('正在检查仓库更新、保存备份并同步…\n');this.settingsTab.updateStatus('正在同步变化');
+  this.busy=true;const log=new Log(this.app,{retry:()=>this.syncChanges()});this.operationLog=log;log.open();log.progress({message:'正在检查更新、保存备份并同步…'});this.settingsTab.updateStatus('正在同步变化');
   try{
-   const result=await this.rpc(options?'resolve':'sync',options);log.close();this.syncReport=result;this.syncError='';
+   const result=await this.rpc(options?'resolve':'sync',options);log.finish(true,{message:result.needsReview?'发现两边都有修改，请在差异窗口选择':`同步完成，导入 ${result.imported} 项变化`});log.close();this.syncReport=result;this.syncError='';
    if(result.needsReview)new Conflicts(this.app,this,result).open();else{new Notice(`同步完成，导入 ${result.imported} 项变化；本地草稿已保留`);this.settingsTab.display();}
-  }catch(error){log.append(`\n同步未完成：${error.message}`);this.syncError=error.message;new Notice('同步未完成，请查看原因');}
+  }catch(error){log.append(`\n同步未完成：${error.message}`);log.finish(false,{error:error.message});this.syncError=error.message;new Notice('同步未完成，请查看原因');}
   finally{this.busy=false;this.settingsTab.updateStatus();}
  }
  async preflight(file,site){
@@ -211,50 +248,58 @@ module.exports = class BlogPublisher extends Plugin {
   // Flush the editor before reading the Markdown from disk.
   const view = this.app.workspace.getActiveViewOfType(require('obsidian').MarkdownView);
   try { if (view && !media && !site && view.file?.path === file.path) await view.save(); } catch (e) { this.busy=false; return new Notice(`保存文章失败：${e.message}`); }
-  const log = new Log(this.app); log.open(); log.append(action === 'preview' ? '准备预览…\n' : '检查、构建并发布…\n');
+  const slug=file?this.app.metadataCache.getFileCache(file)?.frontmatter?.slug:null;
+  const log=new Log(this.app,{title:media?'图床连接':action==='preview'?'预览博客':'发布博客',subject:site?'首页、关于页和站点设置':file?(this.app.metadataCache.getFileCache(file)?.frontmatter?.title||file.basename):'',publish:action==='publish'&&!media,retry:async()=>{if(media||await this.preflight(file,site))this.execute(action,file,site,media);}});
+  this.operationLog=log;this.publishProgress=null;log.open();log.progress({message:media?'正在连接 Cloudflare…':action==='preview'?'正在准备本地预览…':'正在检查发布内容…'});this.settingsTab.updateStatus();
   const vault = this.app.vault.adapter.getBasePath();
   const args=media?[path.join(this.config.repoPath,'scripts/media.mjs'),action]:[path.join(this.config.repoPath,site?'scripts/site.mjs':'scripts/obsidian.mjs'),action,vault,...(site?[]:[path.join(vault,file.path)])];
   const child = spawn(this.config.nodePath,args,{
    cwd:this.config.repoPath, env:{...process.env, PATH:`${path.dirname(this.config.nodePath)}:/opt/homebrew/bin:/usr/local/bin:${process.env.PATH || ''}`}, shell:false
   });
   let pending='';
-  child.stdout.on('data',d=>{pending+=d.toString();const lines=pending.split('\n');pending=lines.pop();for(const line of lines){if(line.startsWith('@blog-progress ')){try{this.publishProgress=JSON.parse(line.slice(15));this.settingsTab.updateStatus();}catch{}}else log.append(line+'\n');}});child.stderr.on('data',d=>log.append(d.toString()));
-  child.on('error',e=>{this.busy=false;log.append(`\n启动失败：${e.message}`);});
-  child.on('close',code=>{if(pending)log.append(pending);this.busy=false;this.scheduleStatus();log.append(code===0 ? '\n完成。\n':'\n未完成，请查看上面的原因。\n');if(code===0&&action==='publish'&&!media)log.published(this.config.repoPath);new Notice(code===0 ? (action==='publish'&&!media?'发布完成，点击日志顶部链接查看正式网站':'博客操作完成'):'博客操作失败，请查看日志');});
+  child.stdout.on('data',d=>{pending+=d.toString();const lines=pending.split('\n');pending=lines.pop();for(const line of lines){if(line.startsWith('@blog-progress ')){try{this.publishProgress=JSON.parse(line.slice(15));log.progress(this.publishProgress);this.settingsTab.updateStatus();}catch{}}else log.append(line+'\n');}});child.stderr.on('data',d=>log.append(d.toString()));
+  let startError;
+  child.on('error',e=>{startError=e.message;log.append(`\n启动失败：${e.message}`);});
+  child.on('close',code=>{if(pending)log.append(pending);this.busy=false;this.scheduleStatus();this.settingsTab.updateStatus();
+   if(code===0&&action==='publish'&&!media)log.published(this.config.repoPath,slug);
+   else log.finish(code===0,{message:code===0?(action==='preview'?'预览已打开，正式网站尚未更新':'图床连接操作完成'):'操作未完成',url:code===0&&action==='preview'?`http://127.0.0.1:4322/${site?'':`blog/${encodeURIComponent(slug)}/`}`:undefined,error:startError||this.publishProgress?.stage==='failed'&&this.publishProgress.message||undefined});
+   new Notice(code===0?(action==='publish'&&!media?'发布完成，可从博客菜单查看结果':'博客操作完成'):'博客操作失败，请查看原因');});
  }
 };
 function sectionFor(label){
+ if(label==='Cloudflare R2 图床')return '图片与图床';if(label==='同步备份')return '高级';
  const f=fields.find(f=>f.label===label),key=f?.key;
  if(['首页介绍','关于页正文'].includes(label)||['homeHeading','latestHeading','latestCount','allPostsText','aboutHeading','aboutDescription','blogHeading','blogDescription'].includes(key))return '页面内容';
  if(f?.type==='image')return '图片与图床';if(['commentsEnabled','giscusRepo','giscusRepoId','giscusCategoryId'].includes(key))return '评论';
  if(['title','description','author','url','language'].includes(key))return '基本信息';return '导航与外观';
 }
 class Settings extends PluginSettingTab {
- constructor(app,plugin){super(app,plugin);this.plugin=plugin;this.section='基本信息';}
+ constructor(app,plugin){super(app,plugin);this.plugin=plugin;this.section='基本信息';this.pageSection='首页';}
  display(){
-  this.cleanupPreviews();const el=this.containerEl;el.empty();el.addClass('blog-settings');
+  this.cleanupPreviews();this.fieldInputs=new Map();const el=this.containerEl;el.empty();el.addClass('blog-settings');
   el.createEl('h2',{text:'博客设置'});
-  el.createEl('p',{text:'文章在 blog 文件夹写，站点内容在这里维护。更改自动保存为本地草稿，点击发布后才会上线。'});
   let draft;
   try{draft=this.plugin.loadSite();}catch(error){el.createEl('p',{text:error.message});this.advanced(el);return;}
   const actions=el.createDiv({cls:'blog-settings-actions'});
-  new Setting(actions).addButton(b=>b.setButtonText('预览站点').onClick(()=>this.plugin.siteAction('preview'))).addButton(b=>b.setButtonText('发布站点设置').setCta().onClick(()=>this.plugin.siteAction('publish')));
+  const bar=actions.createDiv({cls:'blog-toolbar'});this.operationButtons=[];
+  for(const [label,action]of [['预览站点',()=>this.plugin.siteAction('preview')],['发布站点设置',()=>this.plugin.siteAction('publish')]]){const button=bar.createEl('button',{text:label,cls:label==='发布站点设置'?'mod-cta':''});button.addEventListener('click',action);this.operationButtons.push(button);}
+  bar.createEl('button',{text:'搜索设置…'}).addEventListener('click',()=>new SettingsFinder(this.app,this.plugin).open());
   this.status=actions.createEl('small',{text:'更改会自动保存到本地'});
   this.syncStatus=el.createDiv({cls:'blog-sync-status'});this.updateStatus();
-  new Setting(el).setName('同步与检查').setDesc('发现外部修改后，先同步再发布；冲突会逐项展示。').addButton(b=>b.setButtonText('检查更新').onClick(()=>this.plugin.refreshSync(true))).addButton(b=>b.setButtonText('同步变化').onClick(()=>this.plugin.syncChanges())).addButton(b=>b.setButtonText('检查站点内容').onClick(async()=>{if(await this.plugin.preflight(null,true))new Notice('站点内容检查通过');}));
   const tabs=el.createDiv({cls:'blog-settings-tabs'});
   for(const name of ['基本信息','页面内容','图片与图床','导航与外观','评论','高级']){
-   const button=tabs.createEl('button',{text:name,cls:this.section===name?'mod-cta':''});
+   const button=tabs.createEl('button',{text:name,cls:this.section===name?'mod-cta':'',attr:{'aria-pressed':String(this.section===name)}});
    button.addEventListener('click',()=>{this.section=name;this.display();});
   }
   const body=el.createDiv({cls:'blog-settings-body'});
   const group=(title,keys)=>{body.createEl('h3',{text:title});for(const key of keys)this.field(body,fields.find(f=>f.key===key),draft);};
   if(this.section==='基本信息')group('站点信息',['title','description','author','url','language']);
   if(this.section==='页面内容'){
-   group('首页',['homeHeading']);this.page(body,'首页介绍','home',draft);
-   group('首页文章列表',['latestHeading','latestCount','allPostsText']);
-   group('关于页',['aboutHeading','aboutDescription']);this.page(body,'关于页正文','about',draft);
-   group('文章列表页',['blogHeading','blogDescription']);
+   const pages=body.createDiv({cls:'blog-toolbar blog-page-tabs'});
+   for(const name of ['首页','关于页','文章列表'])pages.createEl('button',{text:name,cls:this.pageSection===name?'mod-cta':'',attr:{'aria-pressed':String(this.pageSection===name)}}).addEventListener('click',()=>{this.pageSection=name;this.display();});
+   if(this.pageSection==='首页'){group('首页',['homeHeading']);this.page(body,'首页介绍','home',draft);group('首页文章列表',['latestHeading','latestCount','allPostsText']);}
+   if(this.pageSection==='关于页'){group('关于页',['aboutHeading','aboutDescription']);this.page(body,'关于页正文','about',draft);}
+   if(this.pageSection==='文章列表')group('文章列表页',['blogHeading','blogDescription']);
   }
   if(this.section==='图片与图床'){
    group('站点图片',['homeCover','avatar','defaultCover','favicon']);this.media(body);
@@ -270,7 +315,8 @@ class Settings extends PluginSettingTab {
    group('Giscus 评论',['commentsEnabled','giscusRepo','giscusRepoId','giscusCategoryId']);
   }
   if(this.section==='高级')this.advanced(body);
-  if(this.focusField){const input=this.fieldInputs?.get(this.focusField);input?.scrollIntoView({block:'center'});input?.focus();this.focusField=null;}
+  el.scrollTop=0;
+  if(this.focusField){const input=this.fieldInputs?.get(this.focusField);input?.focus({preventScroll:true});if(input?.tagName==='TEXTAREA')input.setSelectionRange(0,0);input?.scrollIntoView({block:'center'});this.focusField=null;}
  }
  changed(){
   try{this.plugin.saveSite();this.plugin.siteSaveError=false;this.plugin.pendingSite=true;this.status.setText('草稿已保存，点击发布后上线');this.updateStatus();this.plugin.scheduleStatus();}
@@ -286,25 +332,51 @@ class Settings extends PluginSettingTab {
   }
   if(f.type==='number')setting.setDesc(`范围 ${f.min}–${f.max}`);
   if(f.type==='image')setting.setDesc('选择知识库图片，或填写 HTTPS 图片网址；留空可取消。');
+  let imagePreview;
+  const refreshImage=value=>{
+   if(!imagePreview)return;imagePreview.empty();const raw=String(value||'').replace(/^!?\[\[|\]\]$/g,'');let url;
+   if(/^https:\/\//.test(raw))url=raw;else{const file=this.app.metadataCache.getFirstLinkpathDest(raw,'blog/首页介绍.md');if(file)url=this.app.vault.getResourcePath(file);}
+   if(url)imagePreview.createEl('img',{attr:{src:url,alt:f.label,loading:'lazy'}});else imagePreview.createEl('small',{text:raw?'已填写图片路径，可预览站点查看效果':'未设置图片'});
+  };
   setting.addText(t=>{
-   this.fieldInputs.set(f.label,t.inputEl);t.inputEl.setAttribute('aria-label',f.label);t.setValue(String(value)).onChange(v=>update(f.type==='number'?(v.trim()===''?'':Number(v)):v));
+   this.fieldInputs.set(f.label,t.inputEl);t.inputEl.setAttribute('aria-label',f.label);t.setValue(String(value)).onChange(v=>{update(f.type==='number'?(v.trim()===''?'':Number(v)):v);if(f.type==='image')refreshImage(v);});
    if(f.type==='number'){t.inputEl.type='number';t.inputEl.min=f.min;t.inputEl.max=f.max;}
-   if(f.type==='image')setting.addButton(b=>b.setButtonText('选图').onClick(()=>new ImagePicker(this.app,image=>{t.setValue(image.path);update(image.path);},this.plugin).open()));
+   if(f.type==='image'){
+    setting.addButton(b=>b.setButtonText('选图').onClick(()=>new ImagePicker(this.app,image=>{t.setValue(image.path);update(image.path);refreshImage(image.path);},this.plugin).open()));
+    setting.addExtraButton(b=>b.setIcon('x').setTooltip(`清除${f.label}`).onClick(()=>{t.setValue('');update('');refreshImage('');}));
+   }
   });
+  if(f.type==='image'){setting.settingEl.addClass('blog-image-field');imagePreview=el.createDiv({cls:'blog-setting-image'});refreshImage(value);}
  }
  cleanupPreviews(){for(const value of this.previews||[]){clearTimeout(value.timer);value.component?.unload();if(value.component)this.plugin.removeChild(value.component);}this.previews=[];}
  hide(){this.cleanupPreviews();}
  updateStatus(message){
-  if(!this.syncStatus)return;this.syncStatus.empty();const p=this.plugin;
+  if(!this.syncStatus)return;const expanded=this.syncStatus.querySelector('details')?.open;this.syncStatus.empty();const p=this.plugin;
+  for(const button of this.operationButtons||[])button.disabled=Boolean(p.busy||p.checking);
   let report=p.syncReport,publication=p.publishProgress;
   const folder=path.dirname(siteStore.storagePath(this.app.vault.adapter.getBasePath()));
   try{report??=JSON.parse(fs.readFileSync(path.join(folder,'sync-status.json'),'utf8'));}catch{}
   try{publication??=JSON.parse(fs.readFileSync(path.join(folder,'publish-status.json'),'utf8'));}catch{}
-  const lines=[];
-  if(message)lines.push(message);else if(p.checking)lines.push('正在检查更新…');else if(p.busy)lines.push(publication?.message||'博客操作进行中…');
-  if(p.pendingSite)lines.push('站点有未发布修改，已保存草稿');
+  const c=report?.counts||{},lines=[],blocked=p.busy||p.checking;
+  let headline='尚未检查更新';
+  if(report)headline=c.conflict?`有 ${c.conflict} 项冲突，需要处理`:c.remote||report.behind?`发现外部变化，建议先同步`:c.local||p.pendingSite?`有待发布修改，草稿已保存`:'本地与仓库已同步';
+  if(p.pendingSite&&!c.conflict&&!c.remote&&!report?.behind)headline='有待发布修改，草稿已保存';
+  if(report?.issues?.length)headline=`有 ${report.issues.length} 项内容需要检查，展开详情查看`;
+  if(report?.ahead)headline=report.behind?'仓库提交已分叉，需要先合并':'有尚未推送的提交，发布前请检查详情';
+  if(report?.dirty)headline='仓库有未提交修改，暂不能同步或发布';
+  if(report?.branch&&report.branch!=='main')headline='写作工具正在更新，完成后即可发布';
+  if(publication?.stage==='failed')headline='上次发布未完成，可查看操作结果';
+  if(p.syncError||p.remoteError)headline='更新检查未完成，请查看详情';
+  if(message)headline=message;else if(p.checking)headline='正在检查更新…';else if(p.busy)headline=p.operationLog?.state.message||'博客操作进行中…';
+  this.syncStatus.createEl('strong',{text:headline});
+  const actions=this.syncStatus.createDiv({cls:'blog-toolbar'}),button=(label,action)=>{const b=actions.createEl('button',{text:label});b.disabled=Boolean(blocked);b.addEventListener('click',action);};
+  button('检查更新',()=>p.refreshSync(true));
+  if(c.remote||c.conflict||report?.behind)button(c.conflict?'处理差异':'同步变化',()=>p.syncChanges());
+  if(p.operationLog)actions.createEl('button',{text:p.busy?'查看进度':'查看最近结果'}).addEventListener('click',()=>p.operationLog.open());
+  const detail=this.syncStatus.createEl('details');detail.open=Boolean(expanded);detail.createEl('summary',{text:'同步详情与工具'});
   if(report){
-   const c=report.counts;lines.push(`待发布 ${c.local} 项 · 外部变化 ${c.remote} 项 · 冲突 ${c.conflict} 项`);
+   lines.push(`待发布 ${c.local} 项 · 外部变化 ${c.remote} 项 · 冲突 ${c.conflict} 项`);
+   if(report.branch!=='main')lines.push(`当前仓库分支：${report.branch}，发布需要 main 分支`);
    if(report.dirty)lines.push('仓库有未提交修改；同步和发布前需要先处理');
    if(report.ahead&&report.behind)lines.push('本地与远程提交已分叉，需要先处理 Git 合并');else if(report.behind)lines.push(`GitHub 领先 ${report.behind} 个提交，点击同步变化`);else if(report.ahead)lines.push(`本机仓库有 ${report.ahead} 个未推送提交，请先推送后发布`);
    if(report.issues?.length)lines.push(`有 ${report.issues.length} 项内容需要检查`);
@@ -314,11 +386,14 @@ class Settings extends PluginSettingTab {
   if(report?.lastPublished)lines.push(`${report.lastPublished.deployed?'上次部署提交':'上次推送'}：${new Date(report.lastPublished.at).toLocaleString()}`);
   if(p.syncError)lines.push(`检查／同步未完成：${p.syncError}`);
   if(p.remoteError)lines.push(`GitHub 检查未完成：${p.remoteError}`);
-  for(const line of lines)this.syncStatus.createDiv({text:line});
+  for(const line of lines)detail.createDiv({text:line});
+  const tools=detail.createDiv({cls:'blog-toolbar'});
+  for(const [label,action]of [['同步变化',()=>p.syncChanges()],['检查站点内容',async()=>{if(await p.preflight(null,true))new Notice('站点内容检查通过');}]]){const b=tools.createEl('button',{text:label});b.disabled=Boolean(blocked);b.addEventListener('click',action);}
  }
  page(el,label,key,draft){
-  const setting=new Setting(el).setName(label).setDesc('支持 Markdown 和 ![[图片名]]。下方即时预览仅在本地显示，正式网页请点击顶部预览。');setting.settingEl.addClass('blog-page-field');
-  const rendered=el.createDiv({cls:'blog-markdown-preview markdown-rendered'}),state={timer:null,component:null,generation:0};this.previews.push(state);
+  const setting=new Setting(el).setName(label).setDesc('支持 Markdown 和 ![[图片名]]；更改自动保存，发布后上线。');setting.settingEl.addClass('blog-page-field');
+  const preview=el.createEl('details',{cls:'blog-page-preview'});preview.createEl('summary',{text:'查看文字与图片预览'});
+  const rendered=preview.createDiv({cls:'blog-markdown-preview markdown-rendered'}),state={timer:null,component:null,generation:0};this.previews.push(state);
   const render=async text=>{
    const generation=++state.generation;state.component?.unload();if(state.component)this.plugin.removeChild(state.component);
    state.component=new Component();this.plugin.addChild(state.component);const target=createDiv();
@@ -328,11 +403,13 @@ class Settings extends PluginSettingTab {
   render(draft[key]);
  }
  media(el){
-  el.createEl('h3',{text:'Cloudflare R2 图床'});
+  const heading=el.createEl('h3',{text:'Cloudflare R2 图床',attr:{tabindex:'-1'}});this.fieldInputs.set('Cloudflare R2 图床',heading);
   el.createEl('p',{text:'本地图片照常插入；发布时自动压缩、上传并替换网址。预览不会上传。'});
   const file=path.join(this.plugin.config.repoPath,'.blog-media.json');
   let config={enabled:false,accountId:'',bucket:'blog-images',publicBaseUrl:''};
   try{if(fs.existsSync(file))config={...config,...JSON.parse(fs.readFileSync(file,'utf8'))};}catch(error){el.createEl('p',{text:`图床配置读取失败：${error.message}`});return;}
+  el.createEl('p',{text:config.enabled?'已启用 · 发布时自动压缩上传，原图留在知识库。':'尚未启用图床。',cls:'blog-muted'});
+  const details=el.createEl('details');details.open=!config.enabled;details.createEl('summary',{text:'连接设置'});el=details;
   new Setting(el).setName('发布时上传 R2').addToggle(t=>t.setValue(config.enabled===true).onChange(v=>config.enabled=v));
   for(const [key,label]of [['accountId','Cloudflare 账户 ID'],['bucket','R2 存储桶'],['publicBaseUrl','图片公开地址']])new Setting(el).setName(label).addText(t=>t.setValue(config[key]||'').onChange(v=>config[key]=v.trim()));
   new Setting(el).setName('图床连接').setDesc('连接设置仅存于本机仓库；令牌由 Cloudflare 官方工具管理。').addButton(b=>b.setButtonText('保存图床设置').onClick(()=>{
@@ -341,7 +418,7 @@ class Settings extends PluginSettingTab {
   })).addButton(b=>b.setButtonText('检查连接').onClick(()=>this.plugin.execute('status',null,false,true))).addButton(b=>b.setButtonText('登录 Cloudflare').onClick(()=>this.plugin.execute('login',null,false,true)));
  }
  advanced(el){
-  new Setting(el).setName('同步备份').setDesc('每次同步前保留原内容和处理记录。').addButton(b=>b.setButtonText('打开备份文件夹').onClick(()=>{const folder=path.join(path.dirname(siteStore.storagePath(this.app.vault.adapter.getBasePath())),'sync-backups');fs.mkdirSync(folder,{recursive:true});spawn('open',[folder],{shell:false});}));
+  const backups=new Setting(el).setName('同步备份').setDesc('每次同步前保留原内容和处理记录。').addButton(b=>b.setButtonText('打开备份文件夹').onClick(()=>{const folder=path.join(path.dirname(siteStore.storagePath(this.app.vault.adapter.getBasePath())),'sync-backups');fs.mkdirSync(folder,{recursive:true});spawn('open',[folder],{shell:false});}));backups.settingEl.tabIndex=-1;this.fieldInputs.set('同步备份',backups.settingEl);
   el.createEl('h3',{text:'本机连接'});
   for(const [key,label] of [['repoPath','本地博客仓库路径'],['nodePath','Node.js 路径']])new Setting(el).setName(label).addText(t=>t.setValue(this.plugin.config[key]).onChange(async v=>{this.plugin.config[key]=v.trim();await this.plugin.saveData(this.plugin.config);}));
   el.createEl('p',{text:'原站点配置笔记已备份到插件的 legacy-site-notes 目录。发布只读取站点草稿和引用图片，不会发布备份或其他笔记。'});
