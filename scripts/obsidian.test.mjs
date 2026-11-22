@@ -85,3 +85,14 @@ test('failed Pages deployment preserves the GitHub commit and can be retried bef
   fs.writeFileSync(wrangler,'process.exit(0);');const retried=t.invoke();assert.equal(retried.status,0,retried.stderr);assert.match(fs.readFileSync(t.f.source,'utf8'),/draft: false/);
  }finally{t.clean();}
 });
+
+test('flush-left lines after a list item or quote become their own paragraph, as they look in Obsidian',async()=>{
+ const {separateLazyContinuations}=await import('./obsidian.mjs');
+ assert.equal(separateLazyContinuations('- a\n- b\n形态上，第二段'),'- a\n- b\n\n形态上，第二段');
+ assert.equal(separateLazyContinuations('4. 第四条\n这几类\n不过'),'4. 第四条\n\n这几类\n不过');
+ assert.equal(separateLazyContinuations('- a\n  缩进续行\n- b'),'- a\n  缩进续行\n- b');
+ assert.equal(separateLazyContinuations('> 引用\n正文'),'> 引用\n\n正文');
+ assert.equal(separateLazyContinuations('第一行\n第二行\n\n- a\n\n后文'),'第一行\n第二行\n\n- a\n\n后文');
+ const f=fixture('- 列表\n顶格\n\n```\n- 代码里的列表\n代码顶格\n```');
+ try{const out=prepare(f.vault,f.source).build(false);assert.match(out,/- 列表\n\n顶格/);assert.match(out,/- 代码里的列表\n代码顶格/);}finally{f.clean();}
+});
