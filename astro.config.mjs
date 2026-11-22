@@ -5,6 +5,7 @@ const siteSettings = JSON.parse(fs.readFileSync(new URL('./src/config/site.json'
 
 import mdx from '@astrojs/mdx';
 import sitemap from '@astrojs/sitemap';
+import displayFont from './integrations/display-font.mjs';
 import { defineConfig } from 'astro/config';
 import { satteri } from '@astrojs/markdown-satteri';
 import { obsidianLineBreaks } from './src/lib/obsidian-line-breaks.mjs';
@@ -13,7 +14,7 @@ import { obsidianLineBreaks } from './src/lib/obsidian-line-breaks.mjs';
 export default defineConfig({
 	// 上线后改成你的真实网址（RSS 和 sitemap 会用到）
 	site: siteSettings.url,
-	integrations: [mdx(), sitemap()],
+	integrations: [mdx(), sitemap(), displayFont()],
 	// 关闭本地预览时页面底部的 Astro 开发工具条
 	devToolbar: { enabled: false },
 	markdown: {
