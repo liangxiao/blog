@@ -1,30 +1,35 @@
-/* 全站样式。颜色和字体集中在 :root 里，改这里即可换风格。 */
+/* 全站样式：「书页」风格。颜色和字体集中在 :root 里，改这里即可换风格。 */
 
 :root {
-	--accent: var(--accentLight, #2563eb);
-	--bg: #ffffff;
-	--bg-soft: #f6f8fa;
-	--border: #e5e7eb;
-	--text: #374151;
-	--text-strong: #111827;
-	--text-muted: #6b7280;
-	/* 中文友好字体：优先系统自带的苹方 / 微软雅黑 / 思源黑体 */
-	--font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
-		'Microsoft YaHei', 'Noto Sans CJK SC', 'Noto Sans SC', 'Source Han Sans SC', 'WenQuanYi Micro Hei',
-		Roboto, 'Helvetica Neue', Arial, sans-serif;
+	--accent: var(--accentLight, #b23a2a); /* 朱砂 */
+	--bg: #f7f4ee; /* 纸色 */
+	--bg-soft: #efeae0;
+	--border: #e2dccf;
+	--text: #34302a;
+	--text-strong: #1b1814;
+	--text-muted: #7a7266;
+	--selection: rgba(178, 58, 42, 0.16);
+	/* 正文用黑体，长文更易读；标题用宋体，带一点书卷气 */
+	--font-sans: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei',
+		'Noto Sans CJK SC', 'Noto Sans SC', 'Source Han Sans SC', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+	--font-serif: Charter, 'Iowan Old Style', Georgia, 'Songti SC', 'STSong', 'Noto Serif CJK SC', 'Source Han Serif SC',
+		'Noto Serif SC', 'SimSun', serif;
 	--font-mono: 'JetBrains Mono', 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', 'Noto Sans Mono CJK SC',
 		monospace;
+	--measure: var(--contentWidth, 720px);
+	--radius: 4px;
 }
 
 @media (prefers-color-scheme: dark) {
 	:root {
-		--accent: var(--accentDark, #60a5fa);
-		--bg: #0f1115;
-		--bg-soft: #1a1d23;
-		--border: #2a2e36;
-		--text: #d1d5db;
-		--text-strong: #f3f4f6;
-		--text-muted: #9ca3af;
+		--accent: var(--accentDark, #e07a5f);
+		--bg: #1a1816;
+		--bg-soft: #24211e;
+		--border: #35312c;
+		--text: #d6d0c4;
+		--text-strong: #f0eadf;
+		--text-muted: #968d80;
+		--selection: rgba(224, 122, 95, 0.25);
 	}
 }
 
@@ -34,77 +39,112 @@
 
 html {
 	-webkit-text-size-adjust: 100%;
+	background: var(--bg);
 }
 
 body {
 	margin: 0;
 	font-family: var(--font-sans);
-	font-size: var(--base-font-size, 17px);
-	line-height: 1.8;
+	font-size: var(--baseFontSize, 17px);
+	line-height: 1.85;
+	letter-spacing: 0.01em;
 	color: var(--text);
 	background: var(--bg);
-	word-wrap: break-word;
 	overflow-wrap: break-word;
 	-webkit-font-smoothing: antialiased;
+	text-rendering: optimizeLegibility;
+}
+
+::selection {
+	background: var(--selection);
 }
 
 main {
-	max-width: var(--content-width, 760px);
+	max-width: var(--measure);
 	margin: 0 auto;
-	padding: 2.5rem 1.25rem 0;
+	padding: 3.5rem 1.5rem 0;
 }
 
 h1, h2, h3, h4, h5, h6 {
+	font-family: var(--font-serif);
+	font-weight: 600;
 	color: var(--text-strong);
-	line-height: 1.35;
-	margin: 1.8em 0 0.6em;
+	line-height: 1.4;
+	letter-spacing: 0.02em;
+	margin: 2.2em 0 0.7em;
 }
-h1 { margin-top: 0; font-size: 2rem; }
-h2 { font-size: 1.5rem; }
-h3 { font-size: 1.2rem; }
+h1 { margin-top: 0; font-size: 2.1rem; line-height: 1.3; }
+h2 { font-size: 1.45rem; }
+h3 { font-size: 1.18rem; }
+h4 { font-size: 1.05rem; }
 
-a { color: var(--accent); text-underline-offset: 3px; }
+a {
+	color: var(--accent);
+	text-decoration: underline;
+	text-decoration-thickness: 1px;
+	text-underline-offset: 0.25em;
+	text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent);
+	transition: text-decoration-color 0.15s;
+}
+a:hover {
+	text-decoration-color: var(--accent);
+}
 
-p { margin: 0 0 1.1em; }
+p { margin: 0 0 1.2em; }
+strong { color: var(--text-strong); font-weight: 600; }
 
-img { max-width: 100%; height: auto; border-radius: 8px; }
+img {
+	max-width: 100%;
+	height: auto;
+	border-radius: var(--radius);
+}
 
+/* 引用：用宋体和细线，不用色块 */
 blockquote {
-	margin: 1.5em 0;
-	padding: 0.5em 1em;
-	border-left: 4px solid var(--accent);
-	background: var(--bg-soft);
+	margin: 1.8em 0;
+	padding: 0.1em 0 0.1em 1.2em;
+	border-left: 2px solid var(--accent);
 	color: var(--text-muted);
-	border-radius: 0 6px 6px 0;
+	font-family: var(--font-serif);
 }
 blockquote p:last-child { margin-bottom: 0; }
 
-hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+/* 分隔线：书里的 · · · */
+hr {
+	border: none;
+	margin: 2.8em 0;
+	text-align: center;
+	color: var(--text-muted);
+	letter-spacing: 1em;
+}
+hr::before {
+	content: '· · ·';
+}
 
-table { width: 100%; border-collapse: collapse; margin: 1.5em 0; font-size: 0.95em; }
-th, td { border: 1px solid var(--border); padding: 0.5em 0.75em; text-align: left; }
-th { background: var(--bg-soft); }
+table { width: 100%; border-collapse: collapse; margin: 1.8em 0; font-size: 0.92em; }
+th, td { border-bottom: 1px solid var(--border); padding: 0.55em 0.75em; text-align: left; }
+th { color: var(--text-strong); font-weight: 600; border-bottom-color: var(--text-muted); }
 
 /* 行内代码 */
 code {
 	font-family: var(--font-mono);
-	font-size: 0.88em;
-	padding: 0.15em 0.4em;
+	font-size: 0.86em;
+	padding: 0.12em 0.36em;
 	background: var(--bg-soft);
-	border: 1px solid var(--border);
-	border-radius: 4px;
+	border-radius: 3px;
 }
 
 /* 代码块（Shiki 高亮） */
 pre {
 	font-family: var(--font-mono);
-	font-size: 0.88em;
-	line-height: 1.6;
-	padding: 1em 1.2em;
-	border-radius: 8px;
+	font-size: 0.86em;
+	line-height: 1.65;
+	letter-spacing: 0;
+	padding: 1.1em 1.3em;
+	border-radius: var(--radius);
 	border: 1px solid var(--border);
 	overflow-x: auto;
-	margin: 1.5em 0;
+	margin: 1.8em 0;
 }
 pre > code { all: unset; }
 
@@ -117,12 +157,18 @@ pre > code { all: unset; }
 	}
 }
 
-.prose ul, .prose ol { padding-left: 1.5em; margin: 0 0 1.1em; }
-.prose li { margin: 0.3em 0; }
+.prose ul, .prose ol { padding-left: 1.6em; margin: 0 0 1.2em; }
+.prose li { margin: 0.35em 0; padding-left: 0.2em; }
+.prose li::marker { color: var(--accent); }
+.prose ol > li::marker { font-family: var(--font-serif); }
+.prose h2 + p, .prose h3 + p { margin-top: 0; }
+.prose img { display: block; margin: 2em auto; border: 1px solid var(--border); }
 
 @media (max-width: 640px) {
-	body { font-size: max(15px, calc(var(--base-font-size, 17px) - 1px)); }
-	h1 { font-size: 1.6rem; }
+	body { font-size: max(15.5px, calc(var(--baseFontSize, 17px) - 1px)); }
+	main { padding-top: 2.25rem; }
+	h1 { font-size: 1.7rem; }
+	h2 { font-size: 1.3rem; }
 }
 
 .sr-only {

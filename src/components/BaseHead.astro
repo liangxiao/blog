@@ -32,8 +32,3 @@ const fullTitle = title === SITE_TITLE ? title : `${title} | ${SITE_TITLE}`;
 <meta property="og:description" content={description} />
 {socialImage && <meta property="og:image" content={new URL(socialImage, Astro.site)} />}
 <meta name="twitter:card" content={socialImage ? 'summary_large_image' : 'summary'} />
-
-<style is:inline>
- :root { --accent: var(--accentLight); --content-width: var(--contentWidth); --base-font-size: var(--baseFontSize); }
- @media (prefers-color-scheme: dark) { :root { --accent: var(--accentDark); } }
-</style>

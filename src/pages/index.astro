@@ -8,43 +8,76 @@ import { getVisiblePosts } from '../lib/posts';
 const entry = await getEntry('pages', 'home');
 if (!entry) throw new Error('缺少首页介绍');
 const { Content } = await render(entry);
-const posts = (await getVisiblePosts()).slice(0, site.latestCount);
+const all = await getVisiblePosts();
+const posts = all.slice(0, site.latestCount);
 ---
 
 <BaseLayout title={SITE_TITLE} description={SITE_DESCRIPTION}>
 	<section class="intro">
 		{site.homeCover && <img class="home-cover" src={site.homeCover} alt={`${SITE_TITLE} 首页封面`} width="1200" loading="eager" />}
-        {site.avatar && <img class="avatar" src={site.avatar} alt={site.author} width="80" height="80" />}
-        <h1>{site.homeHeading}</h1>
-		<div class="prose"><Content /></div>
+		<div class="greeting">
+			{site.avatar && <img class="avatar" src={site.avatar} alt={site.author} width="64" height="64" />}
+			<h1>{site.homeHeading}</h1>
+		</div>
+		<div class="prose lead"><Content /></div>
 	</section>
 	<section>
-		<h2 class="section-title">{site.latestHeading}</h2>
+		<h2 class="section-title"><span>{site.latestHeading}</span></h2>
 		<PostList posts={posts} />
-		<p class="more"><a href="/blog">{site.allPostsText}</a></p>
+		{all.length > posts.length && <p class="more"><a href="/blog">{site.allPostsText}</a></p>}
 	</section>
 </BaseLayout>
 <style>
- .home-cover { width: 100%; height: auto; margin-bottom: 1.5rem; }
- .avatar { border-radius: 50%; object-fit: cover; }
+	.home-cover {
+		width: 100%;
+		height: auto;
+		margin-bottom: 2rem;
+	}
 	.intro {
-		margin-bottom: 3rem;
+		margin-bottom: 3.5rem;
 	}
-	.intro h1 {
-		font-size: 1.9rem;
+	.greeting {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		margin-bottom: 1rem;
 	}
-	.intro p {
-		color: var(--text-muted);
+	.greeting h1 {
+		margin: 0;
+		font-size: 2.4rem;
+		letter-spacing: 0.06em;
 	}
-	.section-title {
-		font-size: 1rem;
-		color: var(--text-muted);
-		font-weight: 600;
-		letter-spacing: 0.05em;
+	.avatar {
+		width: 64px;
+		height: 64px;
+		border-radius: 50%;
+		object-fit: cover;
+	}
+	.lead {
+		font-size: 1.04em;
+		color: var(--text);
+	}
+	.lead :global(p:last-child) {
 		margin-bottom: 0;
 	}
+	.section-title {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		margin: 0 0 1.4rem;
+		font-size: 0.9rem;
+		font-weight: 600;
+		letter-spacing: 0.2em;
+		color: var(--text-muted);
+	}
+	.section-title::after {
+		content: '';
+		flex: 1;
+		height: 1px;
+		background: var(--border);
+	}
 	.more {
-		margin-top: 1.5rem;
-		font-size: 0.95rem;
+		margin-top: 1rem;
+		font-size: 0.92rem;
 	}
 </style>

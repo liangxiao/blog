@@ -1,27 +1,47 @@
 ---
-import { AUTHOR, site } from '../consts';
+import { AUTHOR, SITE_TITLE, site } from '../consts';
 const year = new Date().getFullYear();
 ---
 
 <footer>
-	<p>© {site.copyrightStartYear < year ? `${site.copyrightStartYear}–${year}` : year} {AUTHOR}
-    {site.showRss && <> · <a href="/rss.xml">RSS 订阅</a></>}
-    {site.showPoweredBy && <> · 由 <a href="https://astro.build" target="_blank" rel="noopener">Astro</a> 构建</>}
-    </p>
-    {site.socialLinks.length > 0 && <p>{site.socialLinks.map((link, i) => <>{i > 0 && ' · '}<a href={link.href}>{link.label}</a></>)}</p>}
-    {site.footerText && <p>{site.footerText}</p>}
+	<div class="inner">
+	<p class="colophon">{SITE_TITLE}</p>
+	<p>
+		© {site.copyrightStartYear < year ? `${site.copyrightStartYear}–${year}` : year} {AUTHOR}
+		{site.showRss && <> · <a href="/rss.xml">RSS 订阅</a></>}
+		{site.showPoweredBy && <> · 由 <a href="https://astro.build" target="_blank" rel="noopener">Astro</a> 构建</>}
+	</p>
+	{site.socialLinks.length > 0 && <p>{site.socialLinks.map((link, i) => <>{i > 0 && ' · '}<a href={link.href}>{link.label}</a></>)}</p>}
+	{site.footerText && <p>{site.footerText}</p>}
+	</div>
 </footer>
 <style>
 	footer {
-		max-width: var(--content-width, 760px);
-		margin: 4rem auto 0;
-		padding: 2rem 1.25rem 3rem;
-		border-top: 1px solid var(--border);
+		max-width: var(--measure);
+		margin: 5rem auto 0;
+		padding: 0 1.5rem 3.5rem;
 		color: var(--text-muted);
-		font-size: 0.85rem;
-		text-align: center;
+		font-size: 0.82rem;
+		line-height: 1.9;
+	}
+	.inner {
+		padding-top: 2rem;
+		border-top: 1px solid var(--border);
+	}
+	footer p {
+		margin: 0;
+	}
+	.colophon {
+		font-family: var(--font-serif);
+		color: var(--text);
+		letter-spacing: 0.04em;
+		margin-bottom: 0.2rem;
 	}
 	footer a {
 		color: inherit;
+		text-decoration-color: var(--border);
+	}
+	footer a:hover {
+		color: var(--accent);
 	}
 </style>
