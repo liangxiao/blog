@@ -42,7 +42,7 @@ function fixture({publish = 'ok'} = {}) {
   fs.mkdirSync(path.join(repo, 'node_modules'));
   fs.mkdirSync(path.join(repo, 'src/config'), {recursive: true});
   fs.writeFileSync(path.join(repo, 'src/config/site.json'), JSON.stringify({title: '测试博客', url: 'https://example.com'}));
-  fs.writeFileSync(path.join(repo, 'scripts/sync.mjs'), `const [a]=process.argv.slice(2);console.log(JSON.stringify(a==='validate'?{ok:true,issues:[]}:{ok:true,counts:{local:0,remote:0,conflict:0,synced:1},changes:[]}));`);
+  fs.writeFileSync(path.join(repo, 'scripts/sync.mjs'), `const [a]=process.argv.slice(2);if(a!=='validate')process.getBuiltinModule('fs').appendFileSync(${JSON.stringify(path.join(base, 'rpc.log'))},a+'\\n');console.log(JSON.stringify(a==='validate'?{ok:true,issues:[]}:{ok:true,checkedAt:new Date().toISOString(),counts:{local:0,remote:0,conflict:0,synced:1},changes:[]}));`);
   const state = path.join(vault, '.obsidian/plugins/local-blog-publisher');
   const progress = (stage, message, extra = {}) => `console.log('@blog-progress '+JSON.stringify({stage:${JSON.stringify(stage)},message:${JSON.stringify(message)},at:new Date().toISOString(),...${JSON.stringify(extra)}}));`;
   const scripts = {
@@ -125,6 +125,8 @@ test('publishing runs validation then the publish script and reports success wit
     assert.equal(op.url, 'https://example.com/blog/test-post/');
     assert.deepEqual(op.steps.map(s => s.status), ['done', 'done', 'done', 'done', 'done']);
     assert.equal(p.busy, false);
+    await p.checkPromise;
+    assert.match(fs.readFileSync(path.join(f.base, 'rpc.log'), 'utf8'), /^check$/m, 'a successful publish re-checks GitHub immediately');
   } finally { fs.rmSync(f.base, {recursive: true, force: true}); }
 });
 
