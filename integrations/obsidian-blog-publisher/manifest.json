@@ -1,9 +1,9 @@
 {
   "id": "local-blog-publisher",
   "name": "博客发布",
-  "version": "1.5.0",
+  "version": "2.0.0",
   "minAppVersion": "1.5.0",
-  "description": "在现有知识库管理文章、图片、首页、关于页和站点设置。",
+  "description": "在 Obsidian 里写作、预览并发布博客：侧边栏面板、发布进度、图床与站点设置。",
   "author": "liangxiao",
   "isDesktopOnly": true
 }

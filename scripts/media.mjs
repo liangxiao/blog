@@ -3,6 +3,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { BlogError, codes, isNetworkError } from './errors.mjs';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const types = {'.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp','.gif':'image/gif','.avif':'image/avif','.svg':'image/svg+xml'};
 export function readMediaConfig(base = root) {
@@ -49,29 +50,60 @@ export function mediaAssets(assets, config) {
  };
  return {uploads, rewrite};
 }
-async function matchesPublicImage(asset, fetcher) {
- const response = await fetcher(asset.url, {signal:AbortSignal.timeout(15000)});
- if (response.status === 404) return false;
- if (!response.ok) throw new Error(`图床公开访问失败（HTTP ${response.status}），请检查公开地址和访问权限。`);
- const bytes = Buffer.from(await response.arrayBuffer());
- return bytes.equals(asset.data);
-}
-export async function uploadMedia(uploads, config, {fetcher=fetch, put} = {}) {
- const upload = put || (asset => {
-  const result = spawnSync(process.execPath, [path.join(root,'node_modules/wrangler/bin/wrangler.js'),'r2','object','put',`${config.bucket}/${asset.key}`,'--remote','--pipe','--content-type',asset.contentType,'--cache-control','public, max-age=31536000, immutable'], {cwd:root,input:asset.data,encoding:'utf8',env:{...process.env,CLOUDFLARE_ACCOUNT_ID:config.accountId,WRANGLER_SEND_METRICS:'false'},maxBuffer:2*1024*1024});
-  if(result.error || result.status !== 0) throw new Error('图片上传失败。请先在本机运行 npm run media:login 完成 Cloudflare 授权，再重试发布。');
- });
- for (const asset of uploads.values()) {
-  if (await matchesPublicImage(asset,fetcher)) { console.log(`图床已存在：${asset.key}`); continue; }
-  await upload(asset);
-  let verified = false;
-  for(let attempt=0;attempt<3;attempt++) {
-   if(attempt) await new Promise(resolve=>setTimeout(resolve,1000));
-   if(await matchesPublicImage(asset,fetcher)) {verified=true;break;}
-  }
-  if(!verified) throw new Error('图片已上传，但公开地址的内容校验失败，文章尚未推送。请检查图床域名后重试。');
-  console.log(`图床已上传并验证：${asset.key}`);
+const wrangler = path.join(root,'node_modules/wrangler/bin/wrangler.js');
+const sleep = ms => new Promise(resolve=>setTimeout(resolve,ms));
+// Keys are SHA-256 of the bytes, so "the key exists" already proves "the content matches".
+// Returns true / false, or null when the public endpoint could not be reached.
+export async function publicImageStatus(asset, fetcher=fetch, {timeout=20000}={}) {
+ try {
+  const response = await fetcher(asset.url, {method:'HEAD', signal:AbortSignal.timeout(timeout)});
+  if (response.status === 404) return false;
+  if (response.ok) return true;
+  if (response.status >= 500) return null;
+  throw new BlogError(`图床公开访问失败（HTTP ${response.status}），请检查公开地址和访问权限。`, codes.IMAGE);
+ } catch (error) {
+  if (error instanceof BlogError) throw error;
+  if (isNetworkError(error)) return null;
+  throw error;
  }
+}
+function wranglerPut(asset, config) {
+ const result = spawnSync(process.execPath,[wrangler,'r2','object','put',`${config.bucket}/${asset.key}`,'--remote','--pipe','--content-type',asset.contentType,'--cache-control','public, max-age=31536000, immutable'],{cwd:root,input:asset.data,encoding:'utf8',timeout:120000,env:{...process.env,CLOUDFLARE_ACCOUNT_ID:config.accountId,WRANGLER_SEND_METRICS:'false'},maxBuffer:8*1024*1024});
+ if (!result.error && result.status === 0) return;
+ const output = `${result.stderr||''}\n${result.stdout||''}`;
+ if (/Not logged in|auth token|Authentication error|\[code: 10000\]|login/i.test(output)) throw new BlogError('Cloudflare 授权已过期，请重新登录 Cloudflare 后再发布。', codes.AUTH_CLOUDFLARE);
+ if (result.error?.code === 'ETIMEDOUT' || isNetworkError({message:output})) throw new BlogError('上传图片时网络超时，请检查网络或代理后重试。', codes.NETWORK);
+ const detail = output.split('\n').map(l=>l.trim()).filter(l=>/ERROR|✘/.test(l)).join(' ').replace(/\u001b\[[0-9;]*m/g,'').slice(0,300);
+ throw new BlogError(`图片上传失败${detail?`：${detail}`:''}`, codes.IMAGE);
+}
+export async function uploadMedia(uploads, config, {fetcher=fetch, put, report=()=>{}, retries=2, wait=1500} = {}) {
+ const upload = put || (asset => wranglerPut(asset, config));
+ const total = uploads.size; let index = 0, uploaded = 0, skipped = 0, unverified = 0;
+ for (const asset of uploads.values()) {
+  index++;
+  report({current:index,total,key:asset.key});
+  if (await publicImageStatus(asset,fetcher) === true) { skipped++; console.log(`[${index}/${total}] 图床已存在：${asset.key}`); continue; }
+  for (let attempt=0;;attempt++) {
+   try { await upload(asset); break; }
+   catch (error) {
+    if (error.code === codes.AUTH_CLOUDFLARE || attempt >= retries) throw error;
+    console.log(`[${index}/${total}] 上传未完成（${error.message}），${attempt+1} 秒后重试…`);
+    await sleep(wait*(attempt+1));
+   }
+  }
+  uploaded++;
+  let status = null;
+  for (let attempt=0;attempt<3;attempt++) {
+   if (attempt) await sleep(wait);
+   status = await publicImageStatus(asset,fetcher);
+   if (status === true) break;
+  }
+  if (status === false) throw new BlogError('图片已上传，但公开地址仍返回 404，文章尚未推送。请检查图床域名配置后重试。', codes.IMAGE);
+  if (status === null) { unverified++; console.log(`[${index}/${total}] 已上传（Cloudflare 已确认），公开地址暂时连不上，跳过访问校验：${asset.key}`); }
+  else console.log(`[${index}/${total}] 已上传并验证：${asset.key}`);
+ }
+ if (total) console.log(`图片处理完成：新上传 ${uploaded} 张，已存在 ${skipped} 张${unverified?`，${unverified} 张未能从本机访问校验`:''}。`);
+ return {total,uploaded,skipped,unverified};
 }
 export function articleMedia(plan, config, assets=plan.assets) {
  if (!config) return {plan, uploads:new Map()};
