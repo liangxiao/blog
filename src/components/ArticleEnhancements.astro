@@ -1,0 +1,152 @@
+---
+// Small progressive enhancements for article bodies; the page works the same without JavaScript.
+//  - Images shown smaller than their real size can be clicked to view full size.
+//  - Code blocks get a copy button.
+---
+
+<dialog class="lightbox" aria-label="查看大图">
+	<img alt="" />
+	<p class="caption"></p>
+</dialog>
+
+<script>
+	const prose = document.querySelector('.prose');
+	const dialog = document.querySelector<HTMLDialogElement>('dialog.lightbox');
+
+	if (prose && dialog) {
+		const big = dialog.querySelector('img')!;
+		const caption = dialog.querySelector('.caption')!;
+		const open = (img: HTMLImageElement) => {
+			big.src = img.currentSrc || img.src;
+			big.alt = img.alt;
+			// Obsidian names pasted images like "Pasted image 20261122132214"; those are not captions.
+			const meaningful = img.alt && !/^(image|pasted image \d+|img[_-]?\d+|screenshot.*|[\w-]+\.(png|jpe?g|webp|gif))$/i.test(img.alt.trim());
+			caption.textContent = meaningful ? img.alt : '';
+			dialog.showModal();
+		};
+		dialog.addEventListener('click', () => dialog.close());
+
+		const enable = (img: HTMLImageElement) => {
+			if (img.closest('a') || img.dataset.zoom) return;
+			// Only worth it when the image is noticeably larger than how it is shown.
+			if (img.naturalWidth < img.clientWidth * 1.15) return;
+			img.dataset.zoom = '1';
+			img.tabIndex = 0;
+			img.setAttribute('role', 'button');
+			img.setAttribute('aria-label', `放大查看${img.alt ? `：${img.alt}` : '图片'}`);
+			img.addEventListener('click', () => open(img));
+			img.addEventListener('keydown', (e) => {
+				if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(img); }
+			});
+		};
+		for (const img of prose.querySelectorAll('img')) {
+			// Article images are lazy-loaded: decide once the real size is known.
+			if (img.complete && img.naturalWidth) enable(img);
+			else img.addEventListener('load', () => enable(img), { once: true });
+		}
+		addEventListener('resize', () => prose.querySelectorAll('img').forEach((img) => enable(img)));
+	}
+
+	for (const pre of document.querySelectorAll<HTMLPreElement>('.prose pre')) {
+		const button = document.createElement('button');
+		button.type = 'button';
+		button.className = 'copy-code';
+		button.textContent = '复制';
+		button.setAttribute('aria-label', '复制代码');
+		button.addEventListener('click', async () => {
+			const text = (pre.querySelector('code') ?? pre).innerText.replace(/\n$/, '');
+			try {
+				await navigator.clipboard.writeText(text);
+				button.textContent = '已复制';
+			} catch {
+				const range = document.createRange();
+				range.selectNodeContents(pre);
+				getSelection()?.removeAllRanges();
+				getSelection()?.addRange(range);
+				button.textContent = '已选中，按 ⌘C';
+			}
+			setTimeout(() => (button.textContent = '复制'), 1600);
+		});
+		const wrap = document.createElement('div');
+		wrap.className = 'code-block';
+		pre.replaceWith(wrap);
+		wrap.append(pre, button);
+	}
+</script>
+
+<style is:global>
+	.prose img[data-zoom] {
+		cursor: zoom-in;
+	}
+	.prose img[data-zoom]:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 3px;
+	}
+	dialog.lightbox {
+		max-width: 100vw;
+		max-height: 100vh;
+		width: 100vw;
+		height: 100vh;
+		margin: 0;
+		padding: 2rem;
+		border: none;
+		background: transparent;
+		cursor: zoom-out;
+		display: none;
+		align-items: center;
+		justify-content: center;
+		flex-direction: column;
+		gap: 0.8rem;
+	}
+	dialog.lightbox[open] {
+		display: flex;
+	}
+	dialog.lightbox::backdrop {
+		background: rgba(20, 18, 16, 0.88);
+	}
+	dialog.lightbox img {
+		max-width: min(1600px, 100%);
+		max-height: calc(100vh - 6rem);
+		object-fit: contain;
+		border: none;
+		border-radius: 2px;
+		margin: 0;
+	}
+	dialog.lightbox .caption {
+		margin: 0;
+		color: #d6d0c4;
+		font-size: 0.85rem;
+	}
+	dialog.lightbox .caption:empty {
+		display: none;
+	}
+	.code-block {
+		position: relative;
+	}
+	.copy-code {
+		position: absolute;
+		top: 0.5rem;
+		right: 0.5rem;
+		padding: 0.15rem 0.6rem;
+		font: 0.75rem/1.6 var(--font-sans);
+		color: var(--text-muted);
+		background: var(--bg);
+		border: 1px solid var(--border);
+		border-radius: 3px;
+		cursor: pointer;
+		opacity: 0;
+		transition: opacity 0.15s, color 0.15s;
+	}
+	.code-block:hover .copy-code,
+	.copy-code:focus-visible {
+		opacity: 1;
+	}
+	.copy-code:hover {
+		color: var(--accent);
+	}
+	@media (hover: none) {
+		.copy-code {
+			opacity: 1;
+		}
+	}
+</style>

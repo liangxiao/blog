@@ -1,6 +1,7 @@
 ---
 import { site } from '../consts';
 import Comments from '../components/Comments.astro';
+import ArticleEnhancements from '../components/ArticleEnhancements.astro';
 import { Image } from 'astro:assets';
 import type { CollectionEntry } from 'astro:content';
 import FormattedDate from '../components/FormattedDate.astro';
@@ -42,6 +43,7 @@ const { title, description, pubDate, updatedDate, heroImage, draft, tags = [] } 
 			<slot />
 		</div>
 		<p class="fin" aria-hidden="true">（完）</p>
+		<ArticleEnhancements />
 		<Comments />
 		<p class="back"><a href="/blog">← 全部文章</a></p>
 	</article>

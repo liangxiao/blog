@@ -1,0 +1,56 @@
+---
+import PostList from '../components/PostList.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getVisiblePosts } from '../lib/posts';
+
+// Cloudflare Pages serves this file with status 404 for any unknown path.
+const posts = (await getVisiblePosts()).slice(0, 3);
+---
+
+<BaseLayout title="页面不存在" description="这个页面不存在或已经移走了">
+	<section class="missing">
+		<p class="code">404</p>
+		<h1>这一页没有找到</h1>
+		<p class="hint">可能是链接写错了，或者文章已经换了地址。可以<a href="/">回到首页</a>，或者看看<a href="/blog">全部文章</a>。</p>
+	</section>
+	{posts.length > 0 && (
+		<section>
+			<h2 class="section-title"><span>最近文章</span></h2>
+			<PostList posts={posts} />
+		</section>
+	)}
+</BaseLayout>
+<style>
+	.missing {
+		margin-bottom: 3.5rem;
+	}
+	.code {
+		font-family: var(--font-mono);
+		font-size: 0.85rem;
+		letter-spacing: 0.3em;
+		color: var(--accent);
+		margin: 0 0 0.6rem;
+	}
+	h1 {
+		margin-bottom: 0.8rem;
+	}
+	.hint {
+		color: var(--text-muted);
+	}
+	.section-title {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		margin: 0 0 1.4rem;
+		font-size: 0.9rem;
+		font-weight: 600;
+		letter-spacing: 0.2em;
+		color: var(--text-muted);
+	}
+	.section-title::after {
+		content: '';
+		flex: 1;
+		height: 1px;
+		background: var(--border);
+	}
+</style>
