@@ -9,11 +9,11 @@
 	--text-strong: #1b1814;
 	--text-muted: #7a7266;
 	--selection: rgba(178, 58, 42, 0.16);
-	/* 正文用黑体，长文更易读；标题用宋体，带一点书卷气 */
+	/* 正文用黑体，长文更易读；标题用文楷，带一点书卷气 */
 	--font-sans: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei',
 		'Noto Sans CJK SC', 'Noto Sans SC', 'Source Han Sans SC', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-	--font-serif: Charter, 'Iowan Old Style', Georgia, 'Songti SC', 'STSong', 'Noto Serif CJK SC', 'Source Han Serif SC',
-		'Noto Serif SC', 'SimSun', serif;
+	/* 标题用霞鹜文楷（网页字体，按需加载）；未加载完成前用系统楷体顶上 */
+	--font-display: 'LXGW WenKai', 'Kaiti SC', 'STKaiti', 'KaiTi', var(--font-sans);
 	--font-mono: 'JetBrains Mono', 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', 'Noto Sans Mono CJK SC',
 		monospace;
 	--measure: var(--contentWidth, 720px);
@@ -66,7 +66,7 @@ main {
 }
 
 h1, h2, h3, h4, h5, h6 {
-	font-family: var(--font-serif);
+	font-family: var(--font-display);
 	font-weight: 600;
 	color: var(--text-strong);
 	line-height: 1.4;
@@ -99,13 +99,13 @@ img {
 	border-radius: var(--radius);
 }
 
-/* 引用：用宋体和细线，不用色块 */
+/* 引用：用文楷和细线，不用色块 */
 blockquote {
 	margin: 1.8em 0;
 	padding: 0.1em 0 0.1em 1.2em;
 	border-left: 2px solid var(--accent);
 	color: var(--text-muted);
-	font-family: var(--font-serif);
+	font-family: var(--font-display);
 }
 blockquote p:last-child { margin-bottom: 0; }
 
@@ -160,7 +160,7 @@ pre > code { all: unset; }
 .prose ul, .prose ol { padding-left: 1.6em; margin: 0 0 1.2em; }
 .prose li { margin: 0.35em 0; padding-left: 0.2em; }
 .prose li::marker { color: var(--accent); }
-.prose ol > li::marker { font-family: var(--font-serif); }
+.prose ol > li::marker { font-family: var(--font-display); }
 .prose h2 + p, .prose h3 + p { margin-top: 0; }
 .prose img { display: block; margin: 2em auto; border: 1px solid var(--border); }
 
