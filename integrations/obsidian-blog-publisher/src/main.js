@@ -159,7 +159,9 @@ module.exports = class BlogPublisher extends Plugin {
     this.busy = false; this.child = null;
     this.rerender();
     if (!this.view) new Notice(op.state === 'success' ? `${op.title}：${op.message}` : `${op.title}没有完成，打开博客面板查看原因`);
-    this.scheduleStatus();
+    // A finished publish or sync changed GitHub, so re-check against the remote rather than only locally.
+    if (op.state === 'success' && ['publish', 'sync'].includes(op.kind)) { clearTimeout(this.statusTimer); this.refreshSync(true, true); }
+    else this.scheduleStatus();
   }
 
   // Spawns a script for `op`, wiring logs, progress and the final state.
