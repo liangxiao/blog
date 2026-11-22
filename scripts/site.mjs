@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { BlogError, codes, classify } from './errors.mjs';
 import { prepare, root, run } from './obsidian.mjs';
 import { readMediaConfig, siteMedia, uploadMedia, optimizeAssets } from './media.mjs';
 import { deployPages } from './deploy.mjs';
@@ -75,7 +76,7 @@ export async function publishSite(plan,vault) {
  const old=new Map([...plan.entries.keys()].map(f=>[f,fs.existsSync(path.join(root,f))?fs.readFileSync(path.join(root,f)):null]));
  let committed=false,staged=false;
  try {
-  writeEntries(plan.entries,root);run('npm',['run','build']);sync.progress(vault,'images','正在上传并校验图片');await uploadMedia(media.uploads,mediaConfig);staged=true;
+  writeEntries(plan.entries,root);try{run('npm',['run','build']);}catch(error){throw new BlogError(`构建失败，网站没有更新。展开日志查看 Astro 报错：${String(error.message).trim().split('\n').slice(-3).join(' ')}`,codes.BUILD);}sync.progress(vault,'images','正在上传图片');await uploadMedia(media.uploads,mediaConfig,{report:({current,total})=>sync.progress(vault,'images',`正在上传图片 ${current}/${total}`,{current,total})});staged=true;
   run('git',['add','--',...plan.entries.keys()]);
   if(run('git',['diff','--cached','--name-only'],root,true)){run('git',['commit','-m',commitMessage]);committed=true;}
   sync.progress(vault,'pushing','正在推送 GitHub');run('git',['push','origin','HEAD:main']);
@@ -112,5 +113,5 @@ async function main(){
 }
 if(process.argv[1]&&fs.realpathSync(process.argv[1])===fileURLToPath(import.meta.url)){
  const action=process.argv[2],vault=process.argv[3];
- (action==='publish'&&vault?import('./sync.mjs').then(s=>s.withSyncLock(vault,main)):main()).catch(async e=>{if(vault){const s=await import('./sync.mjs');s.progress(vault,'failed',e.message);}console.error(e.message);process.exitCode=1;});
+ (action==='publish'&&vault?import('./sync.mjs').then(s=>s.withSyncLock(vault,main)):main()).catch(async e=>{if(vault){const s=await import('./sync.mjs');s.progress(vault,'failed',e.message,{code:classify(e)});}console.error(e.message);process.exitCode=1;});
 }

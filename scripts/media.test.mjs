@@ -21,14 +21,30 @@ test('site images deduplicate by content and only exported page/config images ar
  for(const data of result.plan.entries.values())assert.match(data.toString(),/https:\/\/images.example.com\/blog\//);
  assert.equal(p.entries.size,4);
 });
-test('R2 uploading skips existing content, verifies uploaded content, and fails closed on an inaccessible public endpoint',async()=>{
+test('R2 uploading checks content-addressed keys with HEAD, retries uploads, and fails closed on 404 or forbidden endpoints',async()=>{
  const {uploads}=articleMedia({assets:new Map([['src/assets/blog/test/a.png',image]]),build:()=>''},config);
- let writes=0;
- await uploadMedia(uploads,config,{fetcher:async()=>response(image),put:async()=>writes++});assert.equal(writes,0);
+ const methods=[];let writes=0;
+ await uploadMedia(uploads,config,{fetcher:async(url,init)=>{methods.push(init.method);return response(null);},put:async()=>writes++,wait:0});assert.equal(writes,0);assert.deepEqual(methods,['HEAD']);
  let exists=false;
- await uploadMedia(uploads,config,{fetcher:async()=>exists?response(image):response('',404),put:async()=>{writes++;exists=true;}});assert.equal(writes,1);
- await assert.rejects(uploadMedia(uploads,config,{fetcher:async()=>response('',403),put:async()=>writes++}),/公开访问失败/);assert.equal(writes,1);
- await assert.rejects(uploadMedia(uploads,config,{fetcher:async()=>response('',404),put:async()=>{throw new Error('upload failed');}}),/upload failed/);
+ const result=await uploadMedia(uploads,config,{fetcher:async()=>exists?response(null):response(null,404),put:async()=>{writes++;exists=true;},wait:0});assert.equal(writes,1);assert.equal(result.uploaded,1);
+ await assert.rejects(uploadMedia(uploads,config,{fetcher:async()=>response(null,403),put:async()=>writes++,wait:0}),/公开访问失败/);assert.equal(writes,1);
+ await assert.rejects(uploadMedia(uploads,config,{fetcher:async()=>response(null,404),put:async()=>{writes++;},wait:0}),/仍返回 404/);
+ let attempts=0;exists=false;
+ await uploadMedia(uploads,config,{fetcher:async()=>exists?response(null):response(null,404),put:async()=>{if(++attempts<3)throw new Error('upload failed');exists=true;},wait:0});assert.equal(attempts,3);
+ attempts=0;
+ await assert.rejects(uploadMedia(uploads,config,{fetcher:async()=>response(null,404),put:async()=>{attempts++;throw new Error('upload failed');},wait:0}),/upload failed/);assert.equal(attempts,3);
+ attempts=0;
+ const auth=Object.assign(new Error('Cloudflare 授权已过期'),{code:'AUTH_CLOUDFLARE'});
+ await assert.rejects(uploadMedia(uploads,config,{fetcher:async()=>response(null,404),put:async()=>{attempts++;throw auth;},wait:0}),{code:'AUTH_CLOUDFLARE'});assert.equal(attempts,1);
+});
+test('an unreachable public endpoint does not block publishing once Cloudflare confirmed the upload',async()=>{
+ const {uploads}=articleMedia({assets:new Map([['src/assets/blog/test/a.png',image]]),build:()=>''},config);
+ let writes=0;const progress=[];
+ const timeout=async()=>{throw Object.assign(new Error('The operation was aborted due to timeout'),{name:'TimeoutError'});};
+ const result=await uploadMedia(uploads,config,{fetcher:timeout,put:async()=>writes++,wait:0,report:p=>progress.push(p)});
+ assert.equal(writes,1);assert.equal(result.unverified,1);assert.deepEqual(progress.map(p=>[p.current,p.total]),[[1,1]]);
+ const failing=async()=>{throw Object.assign(new TypeError('fetch failed'),{cause:{code:'UND_ERR_CONNECT_TIMEOUT'}});};
+ assert.equal((await uploadMedia(uploads,config,{fetcher:failing,put:async()=>writes++,wait:0})).unverified,1);
 });
 test('machine-only configuration rejects invalid endpoints, account IDs and large/nonimage attachments',()=>{
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'blog-media-'));

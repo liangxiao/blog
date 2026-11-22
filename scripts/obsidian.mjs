@@ -3,6 +3,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { BlogError, codes, classify } from './errors.mjs';
 import { parseDocument } from 'yaml';
 import { readMediaConfig, articleMedia, uploadMedia, optimizeAssets } from './media.mjs';
 import { deployPages } from './deploy.mjs';
@@ -122,6 +123,7 @@ async function main() {
  }
  if (run('git',['branch','--show-current'],root,true) !== 'main') throw new Error('发布仓库必须在 main 分支。');
  if (run('git',['status','--porcelain'],root,true)) throw new Error('博客仓库存在未提交的修改，请先处理后再发布。预览不会修改正式仓库。');
+ console.log('@blog-progress '+JSON.stringify({stage:'checking',message:'正在检查 GitHub 上的最新版本',at:new Date().toISOString()}));
  run('git',['fetch','origin','main']);
  if (run('git',['rev-list','--count','HEAD..origin/main'],root,true) !== '0') throw new Error('远程有新提交，请先同步博客仓库后重试。');
  // Refuse to send unrelated unpublished implementation commits.
@@ -139,8 +141,8 @@ async function main() {
  let staged = false;
  try {
   const changed = writeArticle(plan, root, false);
-  run('npm',['run','build']);
-  sync.progress(vault,'images','正在上传并校验图片');await uploadMedia(media.uploads, mediaConfig);
+  try{run('npm',['run','build']);}catch(error){throw new BlogError(`构建失败，网站没有更新。展开日志查看 Astro 报错：${String(error.message).trim().split('\n').slice(-3).join(' ')}`,codes.BUILD);}
+  sync.progress(vault,'images','正在上传图片');await uploadMedia(media.uploads,mediaConfig,{report:({current,total})=>sync.progress(vault,'images',`正在上传图片 ${current}/${total}`,{current,total})});
   staged = true;
   run('git',['add','--',...changed]);
   if (run('git',['diff','--cached','--name-only'],root,true)) {
@@ -167,5 +169,5 @@ async function main() {
 }
 if (process.argv[1] && fs.realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
  const action=process.argv[2],vault=process.argv[3];
- (action==='publish'&&vault?import('./sync.mjs').then(s=>s.withSyncLock(vault,main)):main()).catch(async e=>{if(vault){const s=await import('./sync.mjs');s.progress(vault,'failed',e.message);}console.error(e.message);process.exitCode=1;});
+ (action==='publish'&&vault?import('./sync.mjs').then(s=>s.withSyncLock(vault,main)):main()).catch(async e=>{if(vault){const s=await import('./sync.mjs');s.progress(vault,'failed',e.message,{code:classify(e)});}console.error(e.message);process.exitCode=1;});
 }

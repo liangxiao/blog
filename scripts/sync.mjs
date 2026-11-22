@@ -291,7 +291,11 @@ export async function recordPublication(vault,scope,deployed,{base=root}={}){
  for(const u of scan.units)scan.state.entries[u.id]={local:u.localHash,repo:u.repoHash,...(u.localPath?{localPath:u.localPath}:{}),...(u.status!=='synced'?{pendingLocal:true}:{})};
  scan.state.lastPublished={at:new Date().toISOString(),commit:scan.head,scope,deployed};writeJSON(stateFile(vault),scan.state);
 }
+// The plugin requests cancellation by creating this file; scripts honour it only at safe checkpoints
+// (before building and between image uploads), so the normal cleanup in `finally` always runs.
+export const cancelFile=vault=>path.join(directory(vault),'cancel-request');
 export function progress(vault,stage,message,extra={}){
+ if(['building','images'].includes(stage)&&fs.existsSync(cancelFile(vault))){fs.rmSync(cancelFile(vault),{force:true});throw Object.assign(new Error('已取消发布，正式网站和仓库都没有变化。'),{code:'CANCELLED'});}
  const value={stage,message,at:new Date().toISOString(),...extra};writeJSON(path.join(directory(vault),'publish-status.json'),value);console.log(`@blog-progress ${JSON.stringify(value)}`);
 }
 export async function validate(vault,source){

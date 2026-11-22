@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
+import {BlogError,codes} from './errors.mjs';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 export function readDeployConfig(base=root){
  const file=path.join(base,'.blog-deploy.json');if(!fs.existsSync(file))return null;
@@ -14,7 +15,7 @@ export function deployPages({base=root,config=readDeployConfig(base),invoke}={})
  const call=invoke||((args)=>spawnSync(process.execPath,[path.join(base,'node_modules/wrangler/bin/wrangler.js'),...args],{cwd:base,stdio:'inherit',env:{...process.env,CLOUDFLARE_ACCOUNT_ID:config.accountId,WRANGLER_SEND_METRICS:'false'}}));
  console.log(`开始部署 Cloudflare Pages：${config.project}`);
  const result=call(['pages','deploy','dist','--project-name',config.project,'--branch',config.branch]);
- if(result.error||result.status!==0)throw new Error('GitHub 内容已保留，但 Cloudflare 部署未完成。请检查授权或网络后，再次点击发布即可重试；需要 Pages 权限时运行 npm run cloudflare:login。');
+ if(result.error||result.status!==0)throw new BlogError('GitHub 内容已保留，但 Cloudflare 部署未完成。请检查授权或网络后，再次点击发布即可重试；需要 Pages 权限时请重新登录 Cloudflare。',codes.DEPLOY);
  console.log(`Cloudflare 已接受 ${config.project} 的部署。`);return true;
 }
 if(process.argv[1]&&fs.realpathSync(process.argv[1])===fileURLToPath(import.meta.url)){
