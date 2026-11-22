@@ -81,6 +81,7 @@ export function prepare(vault, source, options = {}) {
  // Reference-style images have ambiguous shared definitions; fail rather than silently omit them.
  if (/!\[[^\]]*\]\s*\[[^\]]*\]/.test(body)) throw new Error('请将引用式图片改为 ![说明](路径) 或 ![[图片名]] 后发布。');
  if (/\[\[[^\]]+\]\]/.test(body)) throw new Error('正文有指向私人笔记的双链。请改成普通文字或公开链接；不会自动发布被链接的笔记。');
+ body = separateLazyContinuations(body);
  body = body.replace(/\u0000CODE(\d+)\u0000/g, (_, n) => saved[Number(n)]);
  const output = options.page ? { title: options.title || '页面', description: options.description || '页面内容' } : {};
  if (!options.page) for (const k of ['title','description','pubDate','updatedDate','tags']) if (doc.has(k)) output[k] = doc.get(k);
@@ -95,6 +96,21 @@ export function prepare(vault, source, options = {}) {
   return `---\n${out.toString()}---\n${body}`;
  };
  return { slug, source, original, doc, bodyOriginal: original.slice(match?.[0].length || 0), assets, build, resolveAsset };
+}
+// In Obsidian's editor a line written flush-left right after a list item or quote looks like a new
+// paragraph, but Markdown treats it as a "lazy continuation" of that item. Insert the blank line the
+// author meant, so the site shows the structure seen while writing. Indented continuations are kept.
+export function separateLazyContinuations(text) {
+ const lines = text.split('\n'), out = [];
+ let block = null; // 'list' | 'quote' while the previous line belongs to one
+ for (const line of lines) {
+  const blank = !line.trim(), indented = /^[ \t]/.test(line);
+  const listItem = /^\s*(?:[-*+]|\d+[.)])\s/.test(line), quote = /^\s*>/.test(line);
+  if (!blank && !indented && !listItem && !quote && block) out.push('');
+  out.push(line);
+  block = blank ? null : listItem ? 'list' : quote ? 'quote' : block && indented && block === 'list' ? 'list' : null;
+ }
+ return out.join('\n');
 }
 function writeArticle(plan, dest, draft) {
  const article = `src/content/blog/${plan.slug}.md`;
