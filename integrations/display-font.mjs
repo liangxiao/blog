@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url';
 
 export const FAMILY = 'LXGW WenKai Site';
 // Elements styled with var(--font-display); keep in sync with the stylesheets.
-const TAGS = /<(h[1-6]|blockquote)\b[^>]*>([\s\S]*?)<\/\1>/g;
+const TAGS = /<(h[1-6]|blockquote|summary)\b[^>]*>([\s\S]*?)<\/\1>/g;
 const CLASSES = /<(\w+)\b[^>]*class="[^"]*\b(?:site-title|title|subtitle|year-label|colophon|fin)\b[^"]*"[^>]*>([\s\S]*?)<\/\1>/g;
 const ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
 const decode = s => s.replace(/<[^>]+>/g, '').replace(/&(#x?[0-9a-f]+|\w+);/gi, (m, e) =>
