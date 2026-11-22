@@ -149,6 +149,9 @@ pre {
 }
 pre > code { all: unset; }
 
+/* 浅色模式：代码块用纸色底，和页面统一（Shiki 默认是纯白） */
+.astro-code { background-color: var(--bg-soft) !important; }
+
 /* Shiki 双主题：深色模式下切换颜色 */
 @media (prefers-color-scheme: dark) {
 	.astro-code,
