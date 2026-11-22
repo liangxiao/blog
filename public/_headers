@@ -1,0 +1,5 @@
+# Hashed build assets never change, so browsers may keep them for a year without revalidating.
+/_astro/*
+  Cache-Control: public, max-age=31536000, immutable
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable

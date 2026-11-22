@@ -12,8 +12,9 @@
 	/* 正文用黑体，长文更易读；标题用文楷，带一点书卷气 */
 	--font-sans: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei',
 		'Noto Sans CJK SC', 'Noto Sans SC', 'Source Han Sans SC', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-	/* 标题用霞鹜文楷（网页字体，按需加载）；未加载完成前用系统楷体顶上 */
-	--font-display: 'LXGW WenKai', 'Kaiti SC', 'STKaiti', 'KaiTi', var(--font-sans);
+	/* 标题用霞鹜文楷：构建时裁剪出只含标题用字的子集（integrations/display-font.mjs）；
+	   本机装了文楷时预览直接用本地字体，访客加载前先用系统楷体，切换几乎无感 */
+	--font-display: 'LXGW WenKai Site', 'LXGW WenKai', 'Kaiti SC', 'STKaiti', 'KaiTi', var(--font-sans);
 	--font-mono: 'JetBrains Mono', 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', 'Noto Sans Mono CJK SC',
 		monospace;
 	--measure: var(--contentWidth, 720px);
