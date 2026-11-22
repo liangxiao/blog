@@ -8,7 +8,7 @@ import sitemap from '@astrojs/sitemap';
 import displayFont from './integrations/display-font.mjs';
 import { defineConfig } from 'astro/config';
 import { satteri } from '@astrojs/markdown-satteri';
-import { obsidianLineBreaks } from './src/lib/obsidian-line-breaks.mjs';
+import { obsidianLineBreaks, obsidianParagraphs } from './src/lib/obsidian-line-breaks.mjs';
 
 // https://astro.build/config
 export default defineConfig({
@@ -18,8 +18,8 @@ export default defineConfig({
 	// 关闭本地预览时页面底部的 Astro 开发工具条
 	devToolbar: { enabled: false },
 	markdown: {
-		// 和 Obsidian 一致：段落里的单个换行显示为换行
-		processor: satteri({ mdastPlugins: [obsidianLineBreaks] }),
+		// 和 Obsidian 一致：正文里一行一段，列表里单个换行显示为换行
+		processor: satteri({ mdastPlugins: [obsidianParagraphs, obsidianLineBreaks] }),
 		// 代码块高亮（Shiki），浅色/深色主题自动跟随系统
 		shikiConfig: {
 			themes: { light: 'github-light', dark: 'github-dark' },
