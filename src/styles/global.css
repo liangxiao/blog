@@ -166,6 +166,8 @@ pre > code { all: unset; }
 .prose li::marker { color: var(--accent); }
 .prose ol > li::marker { font-family: var(--font-display); }
 .prose h2 + p, .prose h3 + p { margin-top: 0; }
+.prose h2, .prose h3 { scroll-margin-top: 1.5rem; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
 .prose img { display: block; margin: 2em auto; border: 1px solid var(--border); }
 
 @media (max-width: 640px) {

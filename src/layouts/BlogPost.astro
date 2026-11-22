@@ -2,14 +2,17 @@
 import { site } from '../consts';
 import Comments from '../components/Comments.astro';
 import ArticleEnhancements from '../components/ArticleEnhancements.astro';
+import Toc from '../components/Toc.astro';
 import { Image } from 'astro:assets';
+import type { MarkdownHeading } from 'astro';
 import type { CollectionEntry } from 'astro:content';
 import FormattedDate from '../components/FormattedDate.astro';
 import BaseLayout from './BaseLayout.astro';
 
-type Props = CollectionEntry<'blog'>['data'];
+type Link = { href: string; title: string };
+type Props = CollectionEntry<'blog'>['data'] & { headings?: MarkdownHeading[]; minutes?: number; newer?: Link; older?: Link };
 
-const { title, description, pubDate, updatedDate, heroImage, draft, tags = [] } = Astro.props;
+const { title, description, pubDate, updatedDate, heroImage, draft, tags = [], headings = [], minutes, newer, older } = Astro.props;
 ---
 
 <BaseLayout title={title} description={description} image={heroImage || site.defaultCover}>
@@ -21,6 +24,7 @@ const { title, description, pubDate, updatedDate, heroImage, draft, tags = [] } 
 			<p class="meta">
 				{site.showDates && <FormattedDate date={pubDate} />}
 				{site.showDates && updatedDate && <span>更新于 <FormattedDate date={updatedDate} /></span>}
+				{minutes && <span>约 {minutes} 分钟读完</span>}
 				{site.showTags && tags.length > 0 && <span class="tags">{tags.map((t) => <span>#{t}</span>)}</span>}
 			</p>
 		</header>
@@ -39,10 +43,17 @@ const { title, description, pubDate, updatedDate, heroImage, draft, tags = [] } 
 			)
 		}
 		{site.showArticleCover && (typeof heroImage === 'string' || (!heroImage && site.defaultCover)) && <img class="hero" src={typeof heroImage === 'string' ? heroImage : site.defaultCover} alt={`${title} 封面`} width="1020" loading="eager" />}
+		<Toc headings={headings} />
 		<div class="prose">
 			<slot />
 		</div>
 		<p class="fin" aria-hidden="true">（完）</p>
+		{(newer || older) && (
+			<nav class="sequel" aria-label="相邻文章">
+				{older ? <a class="older" href={older.href}><small>上一篇</small><span>{older.title}</span></a> : null}
+				{newer && <a class="newer" href={newer.href}><small>下一篇</small><span>{newer.title}</span></a>}
+			</nav>
+		)}
 		<ArticleEnhancements />
 		<Comments />
 		<p class="back"><a href="/blog">← 全部文章</a></p>
@@ -99,6 +110,41 @@ const { title, description, pubDate, updatedDate, heroImage, draft, tags = [] } 
 		color: var(--text-muted);
 		letter-spacing: 0.2em;
 	}
+	.sequel {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 1.5rem;
+		margin: 3rem 0 0;
+		padding: 1.4rem 0;
+		border-top: 1px solid var(--border);
+		border-bottom: 1px solid var(--border);
+	}
+	.sequel a {
+		display: flex;
+		flex-direction: column;
+		gap: 0.3rem;
+		color: inherit;
+		text-decoration: none;
+	}
+	.sequel .newer {
+		text-align: right;
+		grid-column: 2;
+	}
+	.sequel small {
+		font-size: 0.78rem;
+		letter-spacing: 0.2em;
+		color: var(--text-muted);
+	}
+	.sequel span {
+		font-family: var(--font-display);
+		font-size: 1.02rem;
+		line-height: 1.5;
+		color: var(--text-strong);
+		transition: color 0.15s;
+	}
+	.sequel a:hover span {
+		color: var(--accent);
+	}
 	.back {
 		margin-top: 3rem;
 		font-size: 0.92rem;
@@ -106,6 +152,13 @@ const { title, description, pubDate, updatedDate, heroImage, draft, tags = [] } 
 	@media (max-width: 640px) {
 		.post-header h1 {
 			font-size: 1.75rem;
+		}
+		.sequel {
+			grid-template-columns: 1fr;
+		}
+		.sequel .newer {
+			grid-column: 1;
+			text-align: left;
 		}
 	}
 </style>
