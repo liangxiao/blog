@@ -1,5 +1,5 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';
-import {deployPages} from './deploy.mjs';
+import {deployPages} from '../scripts/deploy.mjs';
 test('direct deployment targets the configured project and main branch, and reports failure instead of publication success',()=>{
  const config={accountId:'a'.repeat(32),project:'old-rookie',branch:'main'};let called;
  assert.equal(deployPages({config,invoke:args=>{called=args;return {status:0};}}),true);

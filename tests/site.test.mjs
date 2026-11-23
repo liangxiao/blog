@@ -6,8 +6,8 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { parse, stringify } from 'yaml';
 import siteStore from '../integrations/obsidian-blog-publisher/site-store.cjs';
-import { fields, prepareSite } from './site.mjs';
-import { root } from './obsidian.mjs';
+import { fields, prepareSite } from '../scripts/site.mjs';
+import { root } from '../scripts/obsidian.mjs';
 function fixture(overrides={}){
  const vault=fs.mkdtempSync(path.join(os.tmpdir(),'blog-site-'));fs.mkdirSync(path.join(vault,'blog'));
  const values=Object.fromEntries(fields.map(f=>[f.label,f.type==='links'?f.default.map(l=>`${l.label} | ${l.href}`):f.default]));

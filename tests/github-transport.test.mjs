@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {spawnSync} from 'node:child_process';
-import {commitBytes,fetchViaAPI,pushViaAPI} from './github-transport.mjs';
+import {commitBytes,fetchViaAPI,pushViaAPI} from '../scripts/github-transport.mjs';
 function fixture(){
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'blog-github-')),local=path.join(dir,'local'),server=path.join(dir,'server');fs.mkdirSync(local);
  const call=(cwd,args,input,env={})=>{const r=spawnSync('git',args,{cwd,input,env:{...process.env,...env},maxBuffer:32*1024*1024});assert.equal(r.status,0,r.stderr.toString());return r.stdout;};
