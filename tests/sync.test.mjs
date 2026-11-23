@@ -4,10 +4,10 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {spawnSync} from 'node:child_process';
-import {prepare,root} from './obsidian.mjs';
-import {prepareSite,fields} from './site.mjs';
+import {prepare,root} from '../scripts/obsidian.mjs';
+import {prepareSite,fields} from '../scripts/site.mjs';
 import store from '../integrations/obsidian-blog-publisher/site-store.cjs';
-import {checkSync,synchronize,assertPublishSafe,withSyncLock} from './sync.mjs';
+import {checkSync,synchronize,assertPublishSafe,withSyncLock} from '../scripts/sync.mjs';
 
 function fixture(){
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'blog-sync-')),repo=path.join(dir,'repo'),remote=path.join(dir,'remote.git'),other=path.join(dir,'other'),vault=path.join(dir,'vault');

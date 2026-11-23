@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import {classify,isNetworkError,BlogError} from './errors.mjs';
+import {classify,isNetworkError,BlogError} from '../scripts/errors.mjs';
 test('errors are classified into actionable codes for the plugin',()=>{
  assert.equal(classify(new BlogError('x','DEPLOY')),'DEPLOY');
  assert.equal(classify(new Error('图片上传失败。请先在本机运行 npm run media:login 完成 Cloudflare 授权')),'AUTH_CLOUDFLARE');
@@ -18,7 +18,7 @@ test('errors are classified into actionable codes for the plugin',()=>{
 test('cancellation is honoured only at safe checkpoints and consumes the request',async()=>{
  const vault=fs.mkdtempSync(path.join(os.tmpdir(),'blog-cancel-'));
  try{
-  const sync=await import('./sync.mjs');
+  const sync=await import('../scripts/sync.mjs');
   fs.mkdirSync(path.dirname(sync.cancelFile(vault)),{recursive:true});fs.writeFileSync(sync.cancelFile(vault),'');
   sync.progress(vault,'pushing','正在推送');assert.ok(fs.existsSync(sync.cancelFile(vault)));
   assert.throws(()=>sync.progress(vault,'images','正在上传图片 1/3'),{code:'CANCELLED'});

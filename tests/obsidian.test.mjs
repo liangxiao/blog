@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { prepare } from './obsidian.mjs';
+import { prepare } from '../scripts/obsidian.mjs';
 function fixture(body) {
  const vault=fs.mkdtempSync(path.join(os.tmpdir(),'blog-export-'));
  fs.mkdirSync(path.join(vault,'blog'));fs.mkdirSync(path.join(vault,'assets'));
@@ -33,7 +33,7 @@ test('rejects image symlinks outside vault',()=>{
 });
 
 import { spawnSync } from 'node:child_process';
-import { root } from './obsidian.mjs';
+import { root } from '../scripts/obsidian.mjs';
 function publicationFixture() {
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'blog-publish-'));
  const repo=path.join(dir,'repo'), remote=path.join(dir,'remote.git');
@@ -87,7 +87,7 @@ test('failed Pages deployment preserves the GitHub commit and can be retried bef
 });
 
 test('flush-left lines after a list item or quote become their own paragraph, as they look in Obsidian',async()=>{
- const {separateLazyContinuations}=await import('./obsidian.mjs');
+ const {separateLazyContinuations}=await import('../scripts/obsidian.mjs');
  assert.equal(separateLazyContinuations('- a\n- b\n形态上，第二段'),'- a\n- b\n\n形态上，第二段');
  assert.equal(separateLazyContinuations('4. 第四条\n这几类\n不过'),'4. 第四条\n\n这几类\n不过');
  assert.equal(separateLazyContinuations('- a\n  缩进续行\n- b'),'- a\n  缩进续行\n- b');

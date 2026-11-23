@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import {readMediaConfig,articleMedia,siteMedia,uploadMedia} from './media.mjs';
+import {readMediaConfig,articleMedia,siteMedia,uploadMedia} from '../scripts/media.mjs';
 const config={enabled:true,accountId:'a'.repeat(32),bucket:'blog-images',publicBaseUrl:'https://images.example.com'};
 const image=Buffer.from('test-image');
 const response=(bytes,status=200)=>new Response(bytes,{status});
@@ -58,7 +58,7 @@ test('machine-only configuration rejects invalid endpoints, account IDs and larg
 });
 test('static images are resized and compressed before R2 naming, while animated images and SVG remain unchanged',async()=>{
  const sharp=(await import('sharp')).default;
- const {optimizeAssets}=await import('./media.mjs');
+ const {optimizeAssets}=await import('../scripts/media.mjs');
  const pixels=Buffer.alloc(2400*1200*3);let seed=42;for(let i=0;i<pixels.length;i++){seed=(Math.imul(seed,1664525)+1013904223)>>>0;pixels[i]=seed>>>24;}
  const png=await sharp(pixels,{raw:{width:2400,height:1200,channels:3}}).png().toBuffer();
  const svg=Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>');
